@@ -1,0 +1,27 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="X12UtilsFRM.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="SurppressParsingComments" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="PartnerId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">GeorgiaPacific</Value>
+    </Setting>
+    <Setting Name="PartnerX12VersionId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">4010</Value>
+    </Setting>
+    <Setting Name="TransformFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">HTML</Value>
+    </Setting>
+    <Setting Name="X12Folder" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\Users\mapei\source\repos\X12Parser\OopFactory.X12.Test</Value>
+    </Setting>
+    <Setting Name="fileList" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="throwExceptions" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
