@@ -7,8 +7,6 @@
     using System.Linq;
     using System.Xml;
 
-    using Fonet;
-
     using X12.Hipaa.Claims.Services;
     using X12.Parsing;
 
