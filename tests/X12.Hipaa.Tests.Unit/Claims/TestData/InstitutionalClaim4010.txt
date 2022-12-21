@@ -4,21 +4,21 @@
       BHT*0019*00*0123*19960918*0932*CH~
       REF*87*004010X096~
       NM1*40*2*MEDICARE*****46*00120~
-        PER*IC*JANE DOE*TE*9005555555~
-      NM1*41*2*JONES HOSPITAL*****46*12345~
+        PER*IC*Upwork  Joe*TE*9005555555~
+      NM1*41*2*Janes  HOSPITAL*****46*12345~
       HL*1**20*1~
         PRV*BI*ZZ*203BA0200N~
-        NM1*85*2*JONES HOSPITAL*****XX*330127~
+        NM1*85*2*Upwork HOSPITAL*****XX*330127~
           PRV*AT*ZZ*363LP0200N~
           N3*225 MAIN STREET BARKLEY BUILDING~
-          N4*CENTERVILLE*PA*17111~
+          N4*Sterling*VA*17111~
           REF*G2*987654080~
 		  REF*EI*123456789~
         HL*2*1*22*0~
           SBR*P*18*******MB~
-          NM1*IL*1*DOE*JOHN*T***MI*030005074A~
+          NM1*IL*1*UPWORK*JOHN*T***MI*030005074A~
             N3*125 CITY AVENUE~
-            N4*CENTERVILLE*PA*17111~
+            N4*Sterling*VA*17111~
             DMG*D8*19261111*M~
           NM1*PR*2*MEDICARE B*****PI*00435~
           CLM*756048Q*89.93***14:A:1**Y*Y*Y~

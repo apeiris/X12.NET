@@ -48,6 +48,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Fonet">
+      <HintPath>..\..\..\Users\mapei\source\repos\X12.NET\packages\Fonet.1.0\lib\net20\Fonet.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -98,6 +101,14 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\src\X12.Hipaa.ClaimParser\X12.Hipaa.ClaimParser.csproj">
+      <Project>{1e3bd8a3-21ea-4b71-8a55-31910211a316}</Project>
+      <Name>X12.Hipaa.ClaimParser</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\src\X12.Hipaa\X12.Hipaa.csproj">
+      <Project>{203c0f4b-d1f0-4c20-8968-7dbd84f4a815}</Project>
+      <Name>X12.Hipaa</Name>
+    </ProjectReference>
     <ProjectReference Include="..\src\X12.Parsing\X12.Parsing.csproj">
       <Project>{29eeaa38-bfb2-4732-a286-eb91355f9bcd}</Project>
       <Name>X12.Parsing</Name>

@@ -49,15 +49,15 @@
             // send the x12 stream in to obtain a claim object
             var document = service.Transform837ToClaimDocument(stream);
             var hcfaclaim = service.TransformClaimToHcfa1500(document.Claims.First());
-            Assert.AreEqual("SMITH, TED", hcfaclaim.Field02_PatientsName);
+            Assert.AreEqual("Sterling, Joe", hcfaclaim.Field02_PatientsName);
             Assert.IsFalse(hcfaclaim.Field01_TypeOfCoverageIsMedicare);
             Assert.IsFalse(hcfaclaim.Field01_TypeOfCoverageIsMedicaid);
             Assert.IsFalse(hcfaclaim.Field03_PatientsSexFemale);
             Assert.IsTrue(hcfaclaim.Field03_PatientsSexMale);
-            Assert.AreEqual("99213", hcfaclaim.Field24_ServiceLines.First().ProcedureCode);
-            Assert.AreEqual("87070", hcfaclaim.Field24_ServiceLines[1].ProcedureCode);
-            Assert.AreEqual("99214", hcfaclaim.Field24_ServiceLines[2].ProcedureCode);
-            Assert.AreEqual("86663", hcfaclaim.Field24_ServiceLines[3].ProcedureCode);
+            Assert.AreEqual("89313", hcfaclaim.Field24_ServiceLines.First().ProcedureCode);
+            Assert.AreEqual("77070", hcfaclaim.Field24_ServiceLines[1].ProcedureCode);
+            Assert.AreEqual("96213", hcfaclaim.Field24_ServiceLines[2].ProcedureCode);
+            Assert.AreEqual("56663", hcfaclaim.Field24_ServiceLines[3].ProcedureCode);
         }
 
         /// <summary>
@@ -79,6 +79,7 @@
             var fonetDocument = new XmlDocument();
             string fonetXml = service.TransformClaimDocumentToFoXml(document);
             fonetDocument.LoadXml(fonetXml);
+            
         }
 
         /// <summary>

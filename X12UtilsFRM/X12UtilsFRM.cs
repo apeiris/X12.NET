@@ -13,27 +13,41 @@ using X12.Shared.Models;
 using System.Diagnostics;
 using X12.Transformations;
 using X12.Parsing;
+using X12.Hipaa.Claims;
+using X12.Hipaa.Claims.Services;
+using System.Reflection;
+using System.Xml;
 
-namespace X12UtilsFRM {
-    public enum enmTabPages {
+namespace X12UtilsFRM
+{
+    public enum enmTabPages
+    {
         parse,
         browser
     }
-    public partial class X12UtilsFRM : Form {
+    public partial class X12UtilsFRM : Form
+    {
         List<Interchange> interchanges = null;
         ToolTip tt = null;
-        static void Log(String s, [CallerMemberName] string cn = "", [CallerLineNumber] int ln = 0, [CallerFilePath] string fp = "") {
+
+        private static readonly string TestImageDirectory = @"..\..\..\tests\X12.Hipaa.Tests.Unit\Claims\TestData\Images\";
+
+        static void Log(String s, [CallerMemberName] string cn = "", [CallerLineNumber] int ln = 0, [CallerFilePath] string fp = "")
+        {
 
             Trace.WriteLine($"{DateTime.Now.ToString()}-{cn}@{fp.Substring(fp.LastIndexOf('\\') + 1)}:{ln}:{s}");
             Trace.Flush();
         }
 
-        public string X12Tohtml(string x12) {
+        public string X12Tohtml(string x12)
+        {
             var htmlService = new X12HtmlTransformationService(new X12EdiParsingService(Properties.Settings.Default.SurppressParsingComments, new x12Test.specFinder()));
             return htmlService.Transform(x12);
         }
-        public string X12ToXml(string x12) {
-            using (MemoryStream memStream = new MemoryStream(1000)) {
+        public string X12ToXml(string x12)
+        {
+            using (MemoryStream memStream = new MemoryStream(1000))
+            {
                 interchanges.First().Serialize(memStream);
                 memStream.Seek(0, 0);
                 StreamReader sr = new StreamReader(memStream);
@@ -41,15 +55,18 @@ namespace X12UtilsFRM {
             }
         }
 
-        public X12UtilsFRM() {
+        public X12UtilsFRM()
+        {
             InitializeComponent();
         }
 
-        private void Form1_Load(object sender, EventArgs e) {
+        private void Form1_Load(object sender, EventArgs e)
+        {
             rbXml.Checked = Properties.Settings.Default.TransformFormat == "XML" ? true : false;
             tt = new ToolTip();
             tt.SetToolTip(btnAddFiles, $"Import X12 Inbound files from {Properties.Settings.Default.X12Folder} to the Listbox below..");
-            if (String.IsNullOrEmpty(Properties.Settings.Default.fileList)) {
+            if (String.IsNullOrEmpty(Properties.Settings.Default.fileList))
+            {
                 btnAddFiles_Click(null, null);
 
             }
@@ -57,46 +74,64 @@ namespace X12UtilsFRM {
             btnParse.Enabled = false;
         }
 
-        private void DisplayHtml(string html) {
+        private void DisplayHtml(string html)
+        {
 
             webBrowser1.Navigate("about:blank");
             webBrowser1.AllowWebBrowserDrop = false;
             webBrowser1.AllowNavigation = false;
 
-            try {
-                if (webBrowser1.Document != null) {
+            try
+            {
+                if (webBrowser1.Document != null)
+                {
                     webBrowser1.Document.Write(string.Empty);
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
 
             }
             webBrowser1.DocumentText = html;
             webBrowser1.AllowNavigation = true;
         }
 
+        private void displayPdf(string file)
+        {
+            webBrowser1.AllowNavigation = true;
+            
+            if(this.webBrowser1.Document!=null)
+            {
+                this.webBrowser1.Navigate(file);
+            }
+        }
 
-
-        private void rbXml_CheckedChanged(object sender, EventArgs e) {
+        private void rbXml_CheckedChanged(object sender, EventArgs e)
+        {
             RadioButton r = (RadioButton)sender;
             Properties.Settings.Default.TransformFormat = r.Checked ? r.Text : Properties.Settings.Default.TransformFormat;
             Log($"TransformFormat:{Properties.Settings.Default.TransformFormat}");
             Properties.Settings.Default.Save();
         }
 
-        private void rbHtml_CheckedChanged(object sender, EventArgs e) {
+        private void rbHtml_CheckedChanged(object sender, EventArgs e)
+        {
             RadioButton r = (RadioButton)sender;
             Properties.Settings.Default.TransformFormat = r.Checked ? r.Text : Properties.Settings.Default.TransformFormat;
             Log($"TransformFormat:{Properties.Settings.Default.TransformFormat}");
             Properties.Settings.Default.Save();
         }
 
-        private void btnAddFiles_Click(object sender, EventArgs e) {
-            //OpenFileDialog fd = new OpenFileDialog();
-            //fd.InitialDirectory = Properties.Settings.Default.X12Folder;
-            //fd.Filter = "Text Files(*.txt)|*.txt|X12 Files|*.x12";
-            //fd.FilterIndex = 0;
+        private void btnAddFiles_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog fd = new OpenFileDialog();
+            fd.InitialDirectory = Properties.Settings.Default.X12Folder;
+            fd.Filter = "Text Files(*.txt)|*.txt|X12 Files|*.x12";
+            fd.FilterIndex = 0;
 
+            lbxFileList.Items.Clear();
             lbxFileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
+            lbxFileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml"));
             string[] ss = new string[lbxFileList.Items.Count];
             lbxFileList.Items.CopyTo(ss, 0);
             Properties.Settings.Default.fileList = String.Join(",", ss);
@@ -106,27 +141,33 @@ namespace X12UtilsFRM {
 
 
         }
-        public string ContentFromFile(string filename/*fullPath*/) {
-            using (Stream ediFile = new FileStream(filename, FileMode.Open, FileAccess.Read)) {
+        public string ContentFromFile(string filename/*fullPath*/)
+        {
+            using (Stream ediFile = new FileStream(filename, FileMode.Open, FileAccess.Read))
+            {
                 return new StreamReader(filename).ReadToEnd();
             }
         }
-        private Encoding GetEncoding(string fname) {
+        private Encoding GetEncoding(string fname)
+        {
             byte[] header = new byte[6];
-            using (FileStream fs = new FileStream(fname, FileMode.Open, FileAccess.Read)) {
+            using (FileStream fs = new FileStream(fname, FileMode.Open, FileAccess.Read))
+            {
                 fs.Read(header, 0, 6);// peak 6 characters to detemind encoding
                 fs.Close();
             }
             return (header[1] == 0 && header[3] == 0 && header[5] == 0) ? Encoding.Unicode : Encoding.UTF8;
         }
-        public string ReadFromStream(Stream strm) {
+        public string ReadFromStream(Stream strm)
+        {
 
             // Log(strm.Position.ToString());
 
             using (StreamReader sr = new StreamReader(strm))
                 return sr.ReadToEnd();
         }
-        private void lbxFileList_SelectedIndexChanged(object sender, EventArgs e) {
+        private void lbxFileList_SelectedIndexChanged(object sender, EventArgs e)
+        {
             string fileName = ((ListBox)sender).Text;
             tt.SetToolTip(lbxFileList, fileName + " is Selected now..");
 
@@ -140,39 +181,85 @@ namespace X12UtilsFRM {
             rtxInterchangeFile.Text = ContentFromFile(fileName);
 
             X12.Parsing.X12Parser parser = new X12.Parsing.X12Parser(new x12Test.specFinder(), throwException);
-            parser.ParserWarning += new X12.Parsing.X12Parser.X12ParserWarningEventHandler(parser_ParserWarning);
+            
+                parser.ParserWarning += new X12.Parsing.X12Parser.X12ParserWarningEventHandler(parser_ParserWarning);
 
-            interchanges = parser.ParseMultiple(rtxInterchangeFile.Text);
-            lblInterchangeCount.Text = interchanges.Count.ToString();
-
-
+                interchanges = parser.ParseMultiple(rtxInterchangeFile.Text);
+                lblInterchangeCount.Text = interchanges.Count.ToString();
+            
+            
 
         }
 
         private void parser_ParserWarning(object sender, X12ParserWarningEventArgs args)// => throw new NotImplementedException();
-            {
+        {
             Log($"IC#={args.InterchangeControlNumber}-FG={args.FunctionalGroupControlNumber}-Segment={args.Segment}{args.Message}");
         }
 
-        private void lblInterchangeCount_TextChanged(object sender, EventArgs e) {
+        private void lblInterchangeCount_TextChanged(object sender, EventArgs e)
+        {
             int fcount = int.Parse(((Label)sender).Text);
             btnParse.Enabled = fcount == 1 ? true : false;
         }
 
-        private void btnParse_Click(object sender, EventArgs e) {
+        private void btnParse_Click(object sender, EventArgs e)
+        {
             string x = "";
-            switch (Properties.Settings.Default.TransformFormat) {
+            switch (Properties.Settings.Default.TransformFormat)
+            {
 
-            case "HTML":
-            x = X12Tohtml(rtxInterchangeFile.Text);
-            break;
-            case "XML":
-            x = X12ToXml(rtxInterchangeFile.Text);
-            break;
+                case "HTML":
+                    x = X12Tohtml(rtxInterchangeFile.Text);
+                    break;
+                case "XML":
+                    x = X12ToXml(rtxInterchangeFile.Text);
+                    break;
             }
             DisplayHtml(x);
             tabControl1.SelectedIndex = (int)enmTabPages.browser;
 
         }
+
+        static readonly string pdfOutDirectory = @"C:\Temp\Pdfs";
+      
+
+        private void btnHippaParse_Click(object sender, EventArgs e)
+        {
+            // C:\Temp is a standard folder for Windows. However, we'll
+            // want to verify that the \Pdfs folder exists and is empty
+           
+            // Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("X12.Hipaa.Tests.Unit.Claims.TestData.ProfessionalClaim1.txt");
+
+            //Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{lbxFileList.SelectedItem}");
+            Stream stream = new FileStream($"{ lbxFileList.SelectedItem }", FileMode.Open, FileAccess.Read);
+
+            // new up a ClaimTransformationService object
+            var service = new ClaimFormTransformationService(
+                new ProfessionalClaimToHcfa1500FormTransformation($"{TestImageDirectory}\\HCFA1500_Red.gif"),
+                new InstitutionalClaimToUb04ClaimFormTransformation($"{TestImageDirectory}\\UB04_Red.gif"),
+                new ProfessionalClaimToHcfa1500FormTransformation($"{TestImageDirectory}\\HCFA1500_Red.gif"));
+            String outfile = $"{lbxFileList.SelectedItem}.pdf";
+            if (File.Exists(outfile)) File.Delete(outfile);
+            using (FileStream pdfoutput = new FileStream(outfile, FileMode.Create, FileAccess.Write))
+            {
+                ClaimDocument document = service.Transform837ToClaimDocument(stream);
+
+                var fonetDocument = new XmlDocument();
+                string fonetXml = service.TransformClaimDocumentToFoXml(document);
+                fonetDocument.LoadXml(fonetXml);
+
+                Fonet.FonetDriver driver = Fonet.FonetDriver.Make();
+                driver.CloseOnExit = true;
+                driver.Render(fonetDocument, pdfoutput);
+                pdfoutput.Close();
+               
+                
+            }
+            string pdfout = $"file:///{outfile}";
+            webBrowser1.Navigate(pdfout);
+            //displayPdf(pdfout);
+        }
+
     }
 }
+

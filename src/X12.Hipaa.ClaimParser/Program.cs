@@ -9,6 +9,7 @@
 
     using X12.Hipaa.Claims.Services;
     using X12.Parsing;
+    using Fonet;
 
     /// <summary>
     /// Primary driver for the Hippa.ClaimParser
