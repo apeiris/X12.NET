@@ -2,21 +2,26 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.IO;
-using System.Runtime.CompilerServices;
-using X12.Shared.Models;
-using System.Diagnostics;
-using X12.Transformations;
-using X12.Parsing;
+using System.Xml;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using NLog.Windows.Forms;
 using X12.Hipaa.Claims;
 using X12.Hipaa.Claims.Services;
-using System.Reflection;
-using System.Xml;
+using X12.Parsing;
+using X12.Shared.Models;
+using X12.Transformations;
 
 namespace X12UtilsFRM {
 	public enum enmTabPages {
@@ -24,6 +29,7 @@ namespace X12UtilsFRM {
 		browser
 		}
 	public partial class X12UtilsFRM : Form {
+		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 		List<Interchange> interchanges = null;
 		ToolTip tt = null;
 
@@ -52,6 +58,24 @@ namespace X12UtilsFRM {
 			InitializeComponent();
 			}
 
+		protected override void OnLoad(EventArgs e) {
+			base.OnLoad(e);
+
+			// Ensure RichTextBox target points to this form and control
+			//this also reroute the console to RTB
+			RichTextBoxTarget.ReInitializeAllTextboxes(this);
+
+			// Test logging
+			Logger.Info("RichTextBox target initialized successfully, any existing Console logging will be routed to this RichTextBox ");
+			Logger.Debug("Debug message to RichTextBox");
+			}
+
+		protected override void OnShown(EventArgs e) {
+			base.OnShown(e);
+			RichTextBoxTarget.ReInitializeAllTextboxes(this); // In case form was not loaded when logging started */
+			Logger.Info("RichTextBox logging attached (UI-safe).");
+			}
+
 		private void Form1_Load(object sender, EventArgs e) {
 			rbXml.Checked = Properties.Settings.Default.TransformFormat == "XML" ? true : false;
 			tt = new ToolTip();
@@ -62,6 +86,12 @@ namespace X12UtilsFRM {
 				}
 			lbxFileList.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
 			btnParse.Enabled = false;
+			Logger.Trace("Trace message");
+			Logger.Debug("Debug message");
+			Logger.Info("Info message");
+			Logger.Warn("Warning message");
+		//	Logger.Error("Error message");
+			Logger.Fatal("Fatal message");
 			}
 
 		private void DisplayHtml(string html) {
@@ -231,7 +261,27 @@ namespace X12UtilsFRM {
 			webBrowser1.Navigate(pdfout);
 			//displayPdf(pdfout);
 			}
+	
 
+		private void btnFindSpec_Click(object sender, EventArgs e) {
+			var finder = new x12Test.specFinder();
+			var spec = finder.FindTransactionSpec("SH", "005010X222A1", "856");
+			Logger.Info($"Spec Found for 856: {spec?.Name}");
+
+			Logger.Trace("Trace message");
+			Logger.Debug("Debug message");
+			Logger.Info("Info message");
+			Logger.Warn("Warning message");
+			Logger.Error("Error message");
+			Logger.Fatal("Fatal message");
+
+			if (spec != null) {
+				
+				MessageBox.Show($"Spec Found for 856: {spec.Name}");
+				} else {
+				MessageBox.Show($"Spec Not Found for 856");
+				}
+			}
 		}
 	}
 
