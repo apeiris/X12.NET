@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://tempuri.org/X12ParserSpecification.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="TransactionSpecification" type="x12:TransactionSpecificationType" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+  <xs:complexType name="SegmentType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute type="xs:string" name="SegmentId" use="optional"/>
+        <xs:attribute type="xs:string" name="Usage" use="optional"/>
+        <xs:attribute type="xs:string" name="Repeat" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="EntityIdentifierType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute type="xs:string" name="Code" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="StartingSegmentType" mixed="true">
+    <xs:sequence>
+      <xs:element type="x12:EntityIdentifierType" name="EntityIdentifier" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="SegmentId" use="optional"/>
+    <xs:attribute type="xs:string" name="Usage" use="optional"/>
+    <xs:attribute type="xs:string" name="Repeat" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="LoopType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="Name"/>
+      <xs:element type="x12:StartingSegmentType" name="StartingSegment" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd">
+        <xs:annotation>
+          <xs:documentation> For Property &amp; Casualty Claim  For Property &amp; Casualty Claim </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element type="x12:SegmentType" name="Segment" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd">
+        <xs:annotation>
+          <xs:documentation> DMG not in spec, but in example within spec Professional Segments DMG not in spec, but in example within spec Professional Segments</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element type="x12:LoopType" name="Loop" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="LoopId" use="optional"/>
+    <xs:attribute type="xs:string" name="Usage" use="optional"/>
+    <xs:attribute type="xs:string" name="LoopRepeat" use="optional"/>
+    <xs:attribute type="xs:string" name="Repeat" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="HierarchicalLoopType">
+    <xs:sequence>
+      <xs:element name="Name">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="BILLING PROVIDER HIERARCHICAL LEVEL"/>
+            <xs:enumeration value="SUBSCRIBER HIERARCHICAL LOOP"/>
+            <xs:enumeration value="PATIENT HIERARCHICAL LOOP"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="x12:SegmentType" name="Segment" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+      <xs:element type="x12:LoopType" name="Loop" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="LoopId" use="optional"/>
+    <xs:attribute type="xs:string" name="Usage" use="optional"/>
+    <xs:attribute type="xs:string" name="LevelCode" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="TransactionSpecificationType">
+    <xs:sequence>
+      <xs:element type="x12:SegmentType" name="Segment" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+      <xs:element type="x12:LoopType" name="Loop" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+      <xs:element type="x12:HierarchicalLoopType" name="HierarchicalLoop" maxOccurs="unbounded" minOccurs="0" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd"/>
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="TransactionSetIdentifierCode"/>
+  </xs:complexType>
+</xs:schema>

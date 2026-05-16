@@ -15,9 +15,8 @@ namespace X12UtilsFRM {
         static void Main() {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-		
-
-			Application.Run(new X12UtilsFRM());
+          
+            Application.Run(new X12UtilsFRM());
         }
     }
 }

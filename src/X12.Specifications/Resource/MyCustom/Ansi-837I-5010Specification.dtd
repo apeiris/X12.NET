@@ -1,0 +1,44 @@
+<?xml encoding="UTF-8"?>
+
+<!ELEMENT ns1:TransactionSpecification (Segment,Loop+,HierarchicalLoop+)>
+<!ATTLIST ns1:TransactionSpecification
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'
+    TransactionSetIdentifierCode  #REQUIRED>
+
+<!ELEMENT ns1:HierarchicalLoop (Name,Segment+,Loop+)>
+<!ATTLIST ns1:HierarchicalLoop
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'
+    LevelCode  #REQUIRED
+    LoopId  #REQUIRED
+    Usage  #REQUIRED>
+
+<!ELEMENT ns1:Segment EMPTY>
+<!ATTLIST ns1:Segment
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'
+    Repeat  #REQUIRED
+    SegmentId  #REQUIRED
+    Usage  #IMPLIED>
+
+<!ELEMENT ns1:Loop (Loop|Name|Segment|StartingSegment)*>
+<!ATTLIST ns1:Loop
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'
+    LoopId  #REQUIRED
+    LoopRepeat  #IMPLIED
+    Repeat  #IMPLIED
+    Usage  #REQUIRED>
+
+<!ELEMENT ns1:StartingSegment (EntityIdentifier)*>
+<!ATTLIST ns1:StartingSegment
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'
+    Repeat  #REQUIRED
+    SegmentId  #REQUIRED
+    Usage  #REQUIRED>
+
+<!ELEMENT ns1:EntityIdentifier EMPTY>
+<!ATTLIST ns1:EntityIdentifier
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'
+    Code  #REQUIRED>
+
+<!ELEMENT ns1:Name (#PCDATA)>
+<!ATTLIST ns1:Name
+    xmlns:ns1 CDATA #FIXED 'http://tempuri.org/X12ParserSpecification.xsd'>

@@ -825,9 +825,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resource\Ansi-837I-5010Specification.xml" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Resource\Ansi-837P-5010Specification.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -1060,6 +1057,9 @@
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resource\MyCustom\Ansi-837I-5010Specification.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

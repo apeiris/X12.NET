@@ -1,0 +1,37 @@
+<x12:TransactionSpecification TransactionSetIdentifierCode="string" xmlns:x12="http://tempuri.org/X12ParserSpecification.xsd">
+  <x12:Segment SegmentId="string" Usage="string" Repeat="string">string</x12:Segment>
+  <!--Zero or more repetitions:-->
+  <x12:Loop LoopId="string" Usage="string" LoopRepeat="string" Repeat="string">
+    <x12:Name>string</x12:Name>
+    <x12:StartingSegment SegmentId="string" Usage="string" Repeat="string">
+      claustra
+      <!--Zero or more repetitions:-->
+      <x12:EntityIdentifier Code="string">string</x12:EntityIdentifier>
+      mollitque
+    </x12:StartingSegment>
+    <!--Zero or more repetitions:-->
+    <x12:Segment SegmentId="string" Usage="string" Repeat="string">string</x12:Segment>
+    <!--Zero or more repetitions:-->
+    <x12:Loop/>
+  </x12:Loop>
+  <!--Zero or more repetitions:-->
+  <x12:HierarchicalLoop LoopId="string" Usage="string" LevelCode="string">
+    <x12:Name>PATIENT HIERARCHICAL LOOP</x12:Name>
+    <!--Zero or more repetitions:-->
+    <x12:Segment SegmentId="string" Usage="string" Repeat="string">string</x12:Segment>
+    <!--Zero or more repetitions:-->
+    <x12:Loop LoopId="string" Usage="string" LoopRepeat="string" Repeat="string">
+      <x12:Name>string</x12:Name>
+      <x12:StartingSegment SegmentId="string" Usage="string" Repeat="string">
+        ac
+        <!--Zero or more repetitions:-->
+        <x12:EntityIdentifier Code="string">string</x12:EntityIdentifier>
+        claustra
+      </x12:StartingSegment>
+      <!--Zero or more repetitions:-->
+      <x12:Segment SegmentId="string" Usage="string" Repeat="string">string</x12:Segment>
+      <!--Zero or more repetitions:-->
+      <x12:Loop/>
+    </x12:Loop>
+  </x12:HierarchicalLoop>
+</x12:TransactionSpecification>
