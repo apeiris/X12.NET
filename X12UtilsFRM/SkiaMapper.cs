@@ -176,27 +176,34 @@ namespace X12UtilsFRM
                         bool isTargetFunctoid = visualTarget is BizTalkFunctoidNode;
 
                         // --- LABEL RULE ROUTER ---
-                        if (isSourceSchema && isTargetFunctoid)
+                        if (isSourceFunctoid && isTargetFunctoid)
                         {
-                            // Case A: Left Schema Node -> Functoid Capsule
-                            // Keep the source node label, strip the target label so the functoid name isn't duplicated
+                            // Case A: Functoid -> Functoid cascade chain
+                            // Completely hide both labels to keep the workspace clean
+                            sourceLabelText = string.Empty;
+                            targetLabelText = string.Empty;
+                        }
+                        else if (isSourceSchema && isTargetFunctoid)
+                        {
+                            // Case B: Left Schema Node -> Functoid Capsule
+                            // Keep the source node name, hide the target capsule label
                             targetLabelText = string.Empty;
                         }
                         else if (isSourceFunctoid && isTargetSchema)
                         {
-                            // Case B: Functoid Capsule -> Right Schema Node
-                            // Strip the source label (functoid name) to keep the right side node clean
+                            // Case C: Functoid Capsule -> Right Schema Node
+                            // Hide the source capsule label, show the destination schema node name
                             sourceLabelText = string.Empty;
                         }
                         else if (isSourceSchema && isTargetSchema)
                         {
-                            // Case C: Direct Left Schema Node -> Right Schema Node link
-                            // Clear the source label and display only one single label badge on the target side
+                            // Case D: Direct Left Schema Node -> Right Schema Node link
+                            // Clear the source label and display a single badge on the target side
                             sourceLabelText = string.Empty;
                         }
                         else if (!string.IsNullOrEmpty(sourceLabelText) && sourceLabelText == targetLabelText)
                         {
-                            // Fallback D: Universal text text match safety catcher
+                            // Fallback E: Universal exact text match safety catcher
                             sourceLabelText = string.Empty;
                         }
 
