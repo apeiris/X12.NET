@@ -58,7 +58,7 @@ namespace X12UtilsFRM
         }
 
         // NEW HELPER METHOD: Seamlessly finds the correct UI component to map paths to
-       
+
 
         private void CheckForLineRightClick(Point clickPt)
         {
@@ -66,10 +66,11 @@ namespace X12UtilsFRM
 
             foreach (var conn in Connections)
             {
-                // CRITICAL FIX: Resolve visual control reference dynamically
                 var visualSource = ResolveSourceControl(conn.Source);
+                var visualTarget = ResolveSourceControl(conn.Target); // Fixed to use dynamic lookups!
+
                 var start = GetControlPoint(visualSource, isSource: true);
-                var end = GetControlPoint(conn.Target as Control, isSource: false);
+                var end = GetControlPoint(visualTarget, isSource: false);
 
                 if (start != SKPoint.Empty && end != SKPoint.Empty)
                 {
@@ -118,6 +119,7 @@ namespace X12UtilsFRM
             return false;
         }
 
+
         protected override void OnPaintSurface(SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
@@ -126,62 +128,84 @@ namespace X12UtilsFRM
             using (var paint = new SKPaint())
             using (var textPaint = new SKPaint())
             {
-                // 1. Line Curve Paint Properties
+                // 1. Curve Rendering Parameters
                 paint.Style = SKPaintStyle.Stroke;
                 paint.StrokeWidth = 2;
                 paint.Color = SKColors.DodgerBlue;
                 paint.IsAntialias = true;
 
-                // 2. Text Label Paint Properties
-                textPaint.Color = Color.FromArgb(70, 80, 110).ToSKColor(); // Slate-gray
-                textPaint.TextSize = 10.5f; // Tighter font size for clean side-by-side display
+                // 2. Line Text Label Parameters
+                textPaint.Color = Color.FromArgb(70, 80, 110).ToSKColor(); // Clean Slate-Gray color palette
+                textPaint.TextSize = 10.5f;
                 textPaint.IsAntialias = true;
                 textPaint.Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold);
                 textPaint.TextAlign = SKTextAlign.Center;
 
                 foreach (var conn in Connections)
                 {
+                    // Trace dynamic visual container references on the layout panel
                     var visualSource = ResolveSourceControl(conn.Source);
-                    var visualTarget = conn.Target as Control; // Fallback resolve for standard controls
+                    var visualTarget = ResolveSourceControl(conn.Target);
 
                     var start = GetControlPoint(visualSource, isSource: true);
                     var end = GetControlPoint(visualTarget, isSource: false);
 
                     if (start != SKPoint.Empty && end != SKPoint.Empty)
                     {
-                        // --- RESOLVE SOURCE LABEL STRING ---
+                        // --- DEFAULT NAME EXTRACTION PIPELINE ---
                         string sourceLabelText = "";
-                        if (conn.Source is System.Xml.XmlNode srcXmlNode)
-                        {
-                            sourceLabelText = srcXmlNode.Name;
-                        }
-                        else if (visualSource is SchemaNodeItem srcSni)
-                        {
+                        if (visualSource is SchemaNodeItem srcSni)
                             sourceLabelText = srcSni.XmlSourceNode.Name;
-                        }
                         else if (visualSource is BizTalkFunctoidNode srcFunctoid)
-                        {
                             sourceLabelText = srcFunctoid.FunctoidName;
-                        }
+                        else if (conn.Source is System.Xml.XmlNode srcXmlNode)
+                            sourceLabelText = srcXmlNode.Name;
 
-                        // --- RESOLVE TARGET LABEL STRING ---
-                        string targetLabelText = "dddddd";
-                        if (conn.Target is SchemaNodeItem tgtSni)
-                        {
+                        string targetLabelText = "";
+                        if (visualTarget is SchemaNodeItem tgtSni)
                             targetLabelText = tgtSni.XmlSourceNode.Name;
-                        }
                         else if (visualTarget is BizTalkFunctoidNode tgtFunctoid)
-                        {
                             targetLabelText = tgtFunctoid.FunctoidName;
+                        else if (conn.Target is System.Xml.XmlNode tgtXmlNode)
+                            targetLabelText = tgtXmlNode.Name;
+
+                        // --- DETERMINISTIC SIDE CLASSIFIERS ---
+                        bool isSourceSchema = (visualSource is SchemaNodeItem) || (conn.Source is System.Xml.XmlNode);
+                        bool isTargetSchema = (visualTarget is SchemaNodeItem) || (conn.Target is System.Xml.XmlNode);
+                        bool isSourceFunctoid = visualSource is BizTalkFunctoidNode;
+                        bool isTargetFunctoid = visualTarget is BizTalkFunctoidNode;
+
+                        // --- LABEL RULE ROUTER ---
+                        if (isSourceSchema && isTargetFunctoid)
+                        {
+                            // Case A: Left Schema Node -> Functoid Capsule
+                            // Keep the source node label, strip the target label so the functoid name isn't duplicated
+                            targetLabelText = string.Empty;
+                        }
+                        else if (isSourceFunctoid && isTargetSchema)
+                        {
+                            // Case B: Functoid Capsule -> Right Schema Node
+                            // Strip the source label (functoid name) to keep the right side node clean
+                            sourceLabelText = string.Empty;
+                        }
+                        else if (isSourceSchema && isTargetSchema)
+                        {
+                            // Case C: Direct Left Schema Node -> Right Schema Node link
+                            // Clear the source label and display only one single label badge on the target side
+                            sourceLabelText = string.Empty;
+                        }
+                        else if (!string.IsNullOrEmpty(sourceLabelText) && sourceLabelText == targetLabelText)
+                        {
+                            // Fallback D: Universal text text match safety catcher
+                            sourceLabelText = string.Empty;
                         }
 
-                        // Draw the line with both structural labels attached!
+                        // Render out the connection line curve with text badges pinned safely onto it
                         DrawBezierLine(canvas, paint, textPaint, start, end, sourceLabelText, targetLabelText);
                     }
                 }
             }
         }
-
         private void DrawBezierLine(SKCanvas canvas, SKPaint paint, SKPaint textPaint, SKPoint start, SKPoint end, string sourceLabel, string targetLabel)
         {
             float controlOffset = Math.Abs(start.X - end.X) / 2;

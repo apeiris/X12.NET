@@ -1023,59 +1023,7 @@ namespace X12UtilsFRM
             return control;
         }
 
-        private void pnlFunctoids_DragDrop(object sender, DragEventArgs e)
-        {
-            TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
-            if (sourceNode == null) return;
-
-            Point clientPoint = pnlFunctoids.PointToClient(new Point(e.X, e.Y));
-            Control targetControl = pnlFunctoids.GetChildAtPoint(clientPoint);
-
-            // 1. Guard against dropping directly onto structural UI boundaries
-            if (targetControl is SchemaNodeItem ||
-                targetControl == pnlSchemaScrollContainer ||
-                targetControl == pnlToolboxWrapper ||
-                targetControl == pnlToolboxCategoriesContainer ||
-                targetControl == btnToolboxToggle ||
-                (pnlSchemaScrollContainer != null && pnlSchemaScrollContainer.Bounds.Contains(clientPoint)) ||
-                (pnlToolboxWrapper != null && pnlToolboxWrapper.Bounds.Contains(clientPoint)))
-            {
-                return;
-            }
-
-            // CASE A: Toolbox operational template drop (Spawns a new independent BizTalk capsule)
-            if (sourceNode.Tag as string == "FUNCTOID_TEMPLATE")
-            {
-                Control customFunctoidBlock = CreateFunctoid(sourceNode.Text, clientPoint);
-                pnlFunctoids.Controls.Add(customFunctoidBlock);
-                customFunctoidBlock.BringToFront();
-                _mapper.Invalidate();
-                return;
-            }
-
-            // CASE B: Source Document Node Drag-Link
-            if (sourceNode.Tag is System.Xml.XmlNode realXmlNode)
-            {
-                // If dropped onto an empty canvas space or the Skia canvas background, spawn a target target block automatically
-                if (targetControl == null || targetControl is SkiaMapper)
-                {
-                    targetControl = CreateFunctoid(sourceNode.Text, clientPoint);
-                    pnlFunctoids.Controls.Add(targetControl);
-                    targetControl.BringToFront();
-                }
-
-                // REVISED FOR PERSISTENCE: Anchor directly to the immutable underlying XmlNode!
-                // This ensures lines do not break when pnlSchemaScrollContainer updates its children.
-                _mapper.Connections.Add(new MappingConnection
-                {
-                    Source = realXmlNode,
-                    Target = targetControl
-                });
-
-                _mapper.Invalidate();
-            }
-        }
-
+       
         private void pnlFunctoids_DragEnter(object sender, DragEventArgs e)
         {
             // Check if the data being dragged is a TreeNode payload or a Functoid capsule
@@ -1089,6 +1037,163 @@ namespace X12UtilsFRM
             }
         }
 
+        private void pnlFunctoids_DragDrop(object sender, DragEventArgs e)
+        {
+            // 1. Calculate drop coordinates relative to the central panel space
+            Point clientPoint = pnlFunctoids.PointToClient(new Point(e.X, e.Y));
+
+            // Resolve the exact parent container control under the mouse pointer
+            Control rawTarget = pnlFunctoids.GetChildAtPoint(clientPoint);
+            Control targetControl = ResolveActualTargetNode(rawTarget, clientPoint);
+
+            // 2. Clear out any background container boundary obstructions
+            if (targetControl == pnlSchemaScrollContainer ||
+                targetControl == pnlTargetSchemaScrollContainer ||
+                targetControl == pnlToolboxWrapper ||
+                targetControl == pnlToolboxCategoriesContainer ||
+                targetControl == btnToolboxToggle ||
+                (pnlSchemaScrollContainer != null && pnlSchemaScrollContainer.Bounds.Contains(clientPoint)) ||
+                (pnlTargetSchemaScrollContainer != null && pnlTargetSchemaScrollContainer.Bounds.Contains(clientPoint)) ||
+                (pnlToolboxWrapper != null && pnlToolboxWrapper.Bounds.Contains(clientPoint)))
+            {
+                return;
+            }
+
+            object connectionSource = null;
+
+            // --- PACKAGING UNIFIED SOURCE PAYLOADS ---
+            if (e.Data.GetDataPresent(typeof(TreeNode)))
+            {
+                TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
+                if (sourceNode != null)
+                {
+                    // Case A: Dropping a brand-new functoid from the toolbox panel list
+                    if (sourceNode.Tag as string == "FUNCTOID_TEMPLATE")
+                    {
+                        Control customFunctoidBlock = CreateFunctoid(sourceNode.Text, clientPoint);
+                        pnlFunctoids.Controls.Add(customFunctoidBlock);
+                        customFunctoidBlock.BringToFront();
+                        _mapper.Invalidate();
+                        return;
+                    }
+
+                    // Case B: Left or Right Tree Panel Data Element
+                    if (sourceNode.Tag is System.Xml.XmlNode realXmlNode)
+                    {
+                        connectionSource = realXmlNode;
+                    }
+                }
+            }
+            else if (e.Data.GetDataPresent(typeof(BizTalkFunctoidNode)))
+            {
+                // Case C: Center Panel Functoid capsule being dragged
+                connectionSource = e.Data.GetData(typeof(BizTalkFunctoidNode)) as BizTalkFunctoidNode;
+            }
+
+            // --- PIPELINE VALIDATION & CONNECTION STORAGE ---
+            if (connectionSource != null)
+            {
+                // Intercept and check if the dragged node belongs to the right panel (Target Schema Registry)
+                bool isRightPanelNode = false;
+                if (e.Data.GetDataPresent(typeof(TreeNode)))
+                {
+                    TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
+                    if (sourceNode != null && sourceNode.Tag is XmlNode realXmlNode)
+                    {
+                        isRightPanelNode = flatTargetSchemaRegistry.Any(sni => sni.XmlSourceNode == realXmlNode);
+                    }
+                }
+
+                if (isRightPanelNode)
+                {
+                    // FIX: If dragged from the right panel onto a functoid, invert the roles.
+                    // The functoid becomes the data SOURCE (right side connection point), 
+                    // and the right panel node becomes the data TARGET.
+                    if (targetControl is BizTalkFunctoidNode functoid)
+                    {
+                        bool connectionExists = _mapper.Connections.Exists(c => c.Source == functoid && c.Target == connectionSource);
+                        if (!connectionExists)
+                        {
+                            _mapper.Connections.Add(new MappingConnection
+                            {
+                                Source = functoid,
+                                Target = connectionSource
+                            });
+                        }
+                        _mapper.Invalidate();
+                    }
+                    else if (targetControl == null || targetControl is SkiaMapper)
+                    {
+                        // Fallback: If a right-panel node is dropped into empty space, spawn an inline functoid 
+                        // that feeds its output forward cleanly into the right panel node target.
+                        TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
+                        Control autoFunctoid = CreateFunctoid(sourceNode.Text, clientPoint);
+                        pnlFunctoids.Controls.Add(autoFunctoid);
+                        autoFunctoid.BringToFront();
+
+                        _mapper.Connections.Add(new MappingConnection
+                        {
+                            Source = autoFunctoid,
+                            Target = connectionSource
+                        });
+                        _mapper.Invalidate();
+                    }
+                    return;
+                }
+
+                // Standard Flow: Left panel nodes or center functoids dragging to targets
+                if (targetControl != null && targetControl != connectionSource)
+                {
+                    bool isValidTarget = false;
+
+                    // Target option A: Landing on a center functional capsule
+                    if (targetControl is BizTalkFunctoidNode)
+                    {
+                        isValidTarget = true;
+                    }
+                    // Target option B: Landing directly on a right-side destination schema node!
+                    else if (targetControl is SchemaNodeItem targetSni && flatTargetSchemaRegistry.Contains(targetSni))
+                    {
+                        isValidTarget = true;
+                    }
+
+                    if (isValidTarget)
+                    {
+                        // Verify if an identical duplicate connection already exists on the canvas
+                        bool connectionExists = _mapper.Connections.Exists(c => c.Source == connectionSource && c.Target == targetControl);
+
+                        if (!connectionExists)
+                        {
+                            _mapper.Connections.Add(new MappingConnection
+                            {
+                                Source = connectionSource,
+                                Target = targetControl
+                            });
+                        }
+
+                        _mapper.Invalidate(); // Repaint the Skia drawing layer immediately
+                    }
+                    else
+                    {
+                        // Fallback: If it's a left node dropped into completely empty canvas air, spawn an inline capsule
+                        if (e.Data.GetDataPresent(typeof(TreeNode)) && (targetControl == null || targetControl is SkiaMapper))
+                        {
+                            TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
+                            Control autoFunctoid = CreateFunctoid(sourceNode.Text, clientPoint);
+                            pnlFunctoids.Controls.Add(autoFunctoid);
+                            autoFunctoid.BringToFront();
+
+                            _mapper.Connections.Add(new MappingConnection
+                            {
+                                Source = connectionSource,
+                                Target = autoFunctoid
+                            });
+                            _mapper.Invalidate();
+                        }
+                    }
+                }
+            }
+        }
 
 
         #endregion pnlFunctoids
