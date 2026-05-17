@@ -33,23 +33,22 @@ namespace X12UtilsFRM
     {
         private List<ToolboxCategory> toolboxCategories = new List<ToolboxCategory>();
         private Panel pnlToolboxContainer = null;
-
         //-- DRAGGING STATE TRACKERS (CRITICAL for smooth UX) --
         private bool _isDraggingFunctoid = false;
         private Point _dragStartMousePos;
         private Point _dragStartControlPos;
         //-- END DRAGGING STATE TRACKERS --
-
         // This flat registry will hold every single node item for quick access during layout calculations and visibility checks
-        private List<SchemaNodeItem> flatSchemaRegistry = new List<SchemaNodeItem>();
-
         // Define these class-level variables inside X12UtilsFRM.cs
         private Panel pnlToolboxWrapper = null;
-        private FlowLayoutPanel pnlToolboxCategoriesContainer = null;
+        private FlowLayoutPanel pnlToolboxCategoriesContainer = null; 
+        private List<SchemaNodeItem> flatSchemaRegistry = new List<SchemaNodeItem>();
+        // Add this field at the top of X12UtilsFRM.cs with your other panel declarations
+        private FlowLayoutPanel pnlTargetSchemaScrollContainer;
+        private List<SchemaNodeItem> flatTargetSchemaRegistry = new List<SchemaNodeItem>();
         private Button btnToolboxToggle = null;
         private bool _isToolboxExpanded = true;
         private const int ToolboxWidth = 245;
-
         private void InitializeToolbox()
         {
             // 1. The main master wrapper panel pinned to the far right edge of the workspace canvas
@@ -70,7 +69,7 @@ namespace X12UtilsFRM
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Width = 20,
                 Dock = DockStyle.Left,
-                FlatStyle = FlatStyle.Flat,
+                FlatStyle = FlatStyle.Popup,
                 BackColor = Color.FromArgb(220, 225, 235),
                 ForeColor = Color.FromArgb(50, 50, 80),
                 Cursor = Cursors.Hand
@@ -87,7 +86,7 @@ namespace X12UtilsFRM
                 FlowDirection = FlowDirection.TopDown, // Force items to stack vertically
                 WrapContents = false,                  // Prevent side-by-side wrapping of categories
                 AutoScroll = true,                     // Automatically show vertical scrollbar when needed
-                Padding = new Padding(0, 20, 0, 0)     // Top padding matching
+                Padding = new Padding(20, 20, 20, 20)     // Top padding matching
             };
             pnlToolboxWrapper.Controls.Add(pnlToolboxCategoriesContainer);
             pnlToolboxCategoriesContainer.BringToFront();
@@ -106,7 +105,6 @@ namespace X12UtilsFRM
 
             RenderToolboxLayout();
         }
-
         private void RenderToolboxLayout()
         {
             if (pnlToolboxCategoriesContainer == null) return;
@@ -116,15 +114,14 @@ namespace X12UtilsFRM
 
             foreach (var category in toolboxCategories)
             {
-                // 1. Give the category a solid fixed layout target width that leaves plenty of room 
-                // for the parent container's scrollbar (ToolboxWidth is 245, so 215 works great)
-                category.Width = 215;
+                // Allocate a predictable fixed layout width that fits safely inside the container view 
+                // regardless of whether the vertical scrollbar is currently visible or hidden.
+                category.Width = 205;
 
-                // 2. Recalculate heights dynamically based on the newly assigned width bounds
+                // Apply width parameters downwards into the category inner containers
                 category.UpdateHeight();
 
-                // 3. Apply standard column margins
-                category.Margin = new Padding(5, 0, 0, 8);
+                category.Margin = new Padding(6, 0, 0, 6);
 
                 pnlToolboxCategoriesContainer.Controls.Add(category);
             }
@@ -158,13 +155,10 @@ namespace X12UtilsFRM
             pnlFunctoids.ResumeLayout(true);
             _mapper.Invalidate();
         }
-
-
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         List<Interchange> interchanges = null;
         ToolTip tt = null;
         private string locationsFile = "";
-
         private static readonly string TestImageDirectory = @"..\..\..\tests\X12.Hipaa.Tests.Unit\Claims\TestData\Images\";
         static readonly string pdfOutDirectory = @"C:\Temp\Pdfs";
         static void Log(String s, [CallerMemberName] string cn = "", [CallerLineNumber] int ln = 0, [CallerFilePath] string fp = "")
@@ -173,7 +167,6 @@ namespace X12UtilsFRM
             Trace.WriteLine($"{DateTime.Now.ToString()}-{cn}@{fp.Substring(fp.LastIndexOf('\\') + 1)}:{ln}:{s}");
             Trace.Flush();
         }
-
         private void MakeControlDraggable(Control masterControl)
         {
             // Route dragging events from the master wrapper panel container itself
@@ -185,13 +178,16 @@ namespace X12UtilsFRM
                 AttachDragEvents(child, masterControl);
             }
         }
-
         private void AttachDragEvents(Control eventTriggerControl, Control actualMovingTarget)
         {
             eventTriggerControl.MouseDown += (sender, e) =>
             {
                 if (e.Button == MouseButtons.Left)
                 {
+                    // FIX PART 1: If Shift is held, skip this moving logic completely 
+                    // so BizTalkFunctoidNode's connection hook can fire!
+                    if (Control.ModifierKeys == Keys.Shift) return;
+
                     _isDraggingFunctoid = true;
                     _dragStartMousePos = Cursor.Position;
                     _dragStartControlPos = actualMovingTarget.Location;
@@ -201,6 +197,13 @@ namespace X12UtilsFRM
 
             eventTriggerControl.MouseMove += (sender, e) =>
             {
+                // FIX PART 2: Safety guard block
+                if (Control.ModifierKeys == Keys.Shift)
+                {
+                    _isDraggingFunctoid = false;
+                    return;
+                }
+
                 if (_isDraggingFunctoid)
                 {
                     int deltaX = Cursor.Position.X - _dragStartMousePos.X;
@@ -224,9 +227,6 @@ namespace X12UtilsFRM
                 }
             };
         }
-
-        // Define this class-level variable at the top of X12UtilsFRM.cs
-        // private FlowLayoutPanel pnlSchemaScrollContainer = null;
         private FlowLayoutPanel pnlSchemaScrollContainer = new FlowLayoutPanel
         {
             Name = "pnlSchemaScrollContainer", // CRITICAL: Allows SkiaMapper to instantly detect it
@@ -238,11 +238,12 @@ namespace X12UtilsFRM
             AutoScroll = true,
             BackColor = Color.Transparent
         };
-        private void InitializeEmbeddedSchemaLayout(string xmlFilePath)
+        private void InitializeEmbeddedSchemaLayout(string sourceXmlPath, string targetXmlPath)
         {
             pnlFunctoids.Controls.Clear();
             _mapper.Connections.Clear();
             flatSchemaRegistry.Clear();
+            flatTargetSchemaRegistry.Clear(); // Reset the destination registry
 
             pnlFunctoids.BackColor = Color.Transparent;
 
@@ -251,58 +252,159 @@ namespace X12UtilsFRM
             pnlFunctoids.Controls.Add(_mapper);
             _mapper.SendToBack();
 
-            // 2. NEW: Initialize the Scrollable Container for the Tree Column
+            // 2. Left Column: Full-Height Source Document Tree Container
             pnlSchemaScrollContainer = new FlowLayoutPanel
             {
-                Width = 285, // 260px node width + 25px for the vertical scrollbar buffer
-                Location = new Point(20, 20),
+                Name = "pnlSchemaScrollContainer",
+                Width = 285,
+                Location = new Point(0, 0),
+                Height = pnlFunctoids.Height,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left,
-                FlowDirection = FlowDirection.TopDown, // Stack nodes vertically
-                WrapContents = false,                  // Keep them in a single column
-                AutoScroll = true,                     // Enable the scrollbar!
-                BackColor = Color.Transparent          // Let Skia lines show through behind it
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = Color.Transparent
             };
-
-
-            // Add this line immediately after setting up pnlSchemaScrollContainer in InitializeEmbeddedSchemaLayout:
             pnlSchemaScrollContainer.Scroll += (s, e) => { _mapper.Invalidate(); };
             pnlFunctoids.Controls.Add(pnlSchemaScrollContainer);
             pnlSchemaScrollContainer.BringToFront();
 
-            // 3. Load the XML schema data
-            XmlDocument doc = new XmlDocument();
-            doc.Load(xmlFilePath);
+            // 3. NEW: Right Column: Full-Height Target Document Tree Container
+            // Positions it perfectly adjacent to the right edge toolbox panel boundary
+            int targetLeftCoordinate = pnlFunctoids.Width - 285 - (pnlToolboxWrapper?.Width ?? 220);
+            pnlTargetSchemaScrollContainer = new FlowLayoutPanel
+            {
+                Name = "pnlTargetSchemaScrollContainer",
+                Width = 285,
+                Location = new Point(targetLeftCoordinate, 0),
+                Height = pnlFunctoids.Height,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right, // Anchors right!
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = Color.Transparent,
+                AllowDrop = true
+            };
+            // FIX 2: Wire up the DragEnter and DragOver events to accept incoming mapping links
+            pnlTargetSchemaScrollContainer.DragEnter += TargetSchemaPanel_DragEnterOrOver;
+            pnlTargetSchemaScrollContainer.DragOver += TargetSchemaPanel_DragEnterOrOver;
+            pnlTargetSchemaScrollContainer.DragDrop += pnlFunctoids_DragDrop;
+            // Keep your scrolling refresh trigger intact
+            pnlTargetSchemaScrollContainer.Scroll += (s, e) => { _mapper.Invalidate(); };
+            pnlFunctoids.Controls.Add(pnlTargetSchemaScrollContainer);
+            pnlTargetSchemaScrollContainer.BringToFront();
 
-            BuildCustomSchemaTree(doc.DocumentElement, 0);
+            // 4. Load Source XML Data
+            XmlDocument sourceDoc = new XmlDocument();
+            sourceDoc.Load(sourceXmlPath);
+            BuildCustomSchemaTree(sourceDoc.DocumentElement, 0, isTargetSchema: false);
+            RenderCustomSchemaLayout(isTargetSchema: false);
 
-            // Render tree nodes inside our brand new scrollable lane
-            RenderCustomSchemaLayout();
+            // 5. Load Target XML Data
+            XmlDocument targetDoc = new XmlDocument();
+            targetDoc.Load(targetXmlPath);
+            BuildCustomSchemaTree(targetDoc.DocumentElement, 0, isTargetSchema: true);
+            RenderCustomSchemaLayout(isTargetSchema: true);
 
-            // Initialize your right-hand toolbox panel
+            // Initialize right-hand toolbox panel accordion panels
             InitializeToolbox();
 
             pnlFunctoids.AllowDrop = true;
             _mapper.Invalidate();
         }
-        private void BuildCustomSchemaTree(XmlNode xmlNode, int indent, SchemaNodeItem parentItem = null)
+        private void RenderCustomSchemaLayout(bool isTargetSchema)
         {
-            if (xmlNode.NodeType != XmlNodeType.Element) return;
+            FlowLayoutPanel container = isTargetSchema ? pnlTargetSchemaScrollContainer : pnlSchemaScrollContainer;
+            List<SchemaNodeItem> registry = isTargetSchema ? flatTargetSchemaRegistry : flatSchemaRegistry;
 
-            var nodeItem = new SchemaNodeItem(xmlNode, indent, (clickedItem) =>
+            if (container == null) return;
+
+            container.SuspendLayout();
+            container.Controls.Clear();
+
+            bool isFirstItem = true;
+
+            foreach (var item in registry)
             {
-                // Redraw the entire layout configuration whenever a user collapses/expands a branch
-                RenderCustomSchemaLayout();
+                // Calculate visible collapse expansion loops hierarchy states
+                if (IsNodeChainVisible(item))
+                {
+                    item.Width = container.Width - 25;
+
+                    if (isFirstItem)
+                    {
+                        item.Margin = new Padding(0, 10, 0, 2);
+                        isFirstItem = false;
+                    }
+                    else
+                    {
+                        item.Margin = new Padding(0, 0, 0, 2);
+                    }
+
+                    container.Controls.Add(item);
+                }
+            }
+
+            container.ResumeLayout(true);
+        }
+        private void BuildCustomSchemaTree(XmlNode node, int depth, bool isTargetSchema)
+        {
+            if (node == null) return;
+
+            SchemaNodeItem item = new SchemaNodeItem(node, depth, (clickedItem) =>
+            {
+                RenderCustomSchemaLayout(isTargetSchema);
                 _mapper.Invalidate();
             });
 
-            if (parentItem != null)
-                parentItem.ChildNodes.Add(nodeItem);
-
-            flatSchemaRegistry.Add(nodeItem);
-
-            foreach (XmlNode child in xmlNode.ChildNodes)
+            if (isTargetSchema)
             {
-                BuildCustomSchemaTree(child, indent + 1, nodeItem);
+                flatTargetSchemaRegistry.Add(item);
+
+                // FIX: Deep-wire the drag-and-drop validation rules down to the subcomponent layer!
+                EnableTargetNodeDragDropInteractions(item);
+            }
+            else
+            {
+                flatSchemaRegistry.Add(item);
+            }
+
+            if (node.Attributes != null)
+            {
+                foreach (XmlAttribute attr in node.Attributes)
+                {
+                    BuildCustomSchemaTree(attr, depth + 1, isTargetSchema);
+                }
+            }
+
+            foreach (XmlNode child in node.ChildNodes)
+            {
+                if (child.NodeType == XmlNodeType.Element)
+                {
+                    BuildCustomSchemaTree(child, depth + 1, isTargetSchema);
+                }
+            }
+        }
+        private void EnableTargetNodeDragDropInteractions(Control rootTargetControl)
+        {
+            rootTargetControl.AllowDrop = true;
+            rootTargetControl.DragEnter += TargetSchemaPanel_DragEnterOrOver;
+            rootTargetControl.DragOver += TargetSchemaPanel_DragEnterOrOver;
+            rootTargetControl.DragDrop += pnlFunctoids_DragDrop;
+
+            // Loop through nested controls (like the text label and icon inside SchemaNodeItem)
+            foreach (Control childControl in rootTargetControl.Controls)
+            {
+                childControl.AllowDrop = true;
+                childControl.DragEnter += TargetSchemaPanel_DragEnterOrOver;
+                childControl.DragOver += TargetSchemaPanel_DragEnterOrOver;
+                childControl.DragDrop += pnlFunctoids_DragDrop;
+
+                // Go deeper if your row item has nested layouts
+                if (childControl.HasChildren)
+                {
+                    EnableTargetNodeDragDropInteractions(childControl);
+                }
             }
         }
         private void RenderCustomSchemaLayout()
@@ -353,7 +455,6 @@ namespace X12UtilsFRM
                 return sr.ReadToEnd();
             }
         }
-
         private SkiaMapper _mapper;
         private void UpdateMap()
         {             // This is where you'd update the _mapper.Connections based on the current state of your UI controls
@@ -407,7 +508,10 @@ namespace X12UtilsFRM
                 btnAddFiles_Click(null, null);
 
             }
-            lbxFileList.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
+            lbxInfileList.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
+            lbxTargetSchema.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
+
+
             btnParse.Enabled = false;
             Logger.Trace("Trace message");
             Logger.Debug("Debug message");
@@ -495,11 +599,11 @@ namespace X12UtilsFRM
             int fcount = int.Parse(((Label)sender).Text);
             btnParse.Enabled = fcount == 1 ? true : false;
         }
-        private void lbxFileList_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbxInputFileList(object sender, EventArgs e)
         {
             string fileName = ((ListBox)sender).Text;
             if (String.IsNullOrEmpty(fileName)) return;
-            tt.SetToolTip(lbxFileList, fileName + " is Selected now..");
+            tt.SetToolTip(lbxInfileList, fileName + " is Selected now..");
 
             if (chkBrowse.Checked)
             {
@@ -522,13 +626,13 @@ namespace X12UtilsFRM
 
 
 
-            //lblSelectedFile.Text = Path.GetFileName(fileName);
-            //Log($"fileName={fileName}");
+            //lblSelectedFile.Text = Path.GetFileName(inputFileName);
+            //Log($"inputFileName={inputFileName}");
 
 
 
             //bool throwException = Properties.Settings.Default.throwExceptions;
-            //rtxInterchangeFile.Text = ContentFromFile(fileName);
+            //rtxInterchangeFile.Text = ContentFromFile(inputFileName);
 
             //X12.Parsing.X12Parser parser = new X12.Parsing.X12Parser(new x12Test.specFinder(), throwException);
 
@@ -551,11 +655,11 @@ namespace X12UtilsFRM
             fd.Filter = "Text Files(*.txt)|*.txt|X12 Files|*.x12";
             fd.FilterIndex = 0;
 
-            lbxFileList.Items.Clear();
-            lbxFileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
-            lbxFileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml"));
-            string[] ss = new string[lbxFileList.Items.Count];
-            lbxFileList.Items.CopyTo(ss, 0);
+            lbxInfileList.Items.Clear();
+            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
+            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml"));
+            string[] ss = new string[lbxInfileList.Items.Count];
+            lbxInfileList.Items.CopyTo(ss, 0);
             Properties.Settings.Default.fileList = String.Join(",", ss);
             Properties.Settings.Default.Save();
 
@@ -606,12 +710,12 @@ namespace X12UtilsFRM
         }
         private void btnHippaParse_Click(object sender, EventArgs e)
         {
-            if (lbxFileList.SelectedItem == null)
+            if (lbxInfileList.SelectedItem == null)
             {
                 MessageBox.Show("Please choose a file ..");
                 return;
             }
-            Stream stream = new FileStream($"{lbxFileList.SelectedItem}", FileMode.Open, FileAccess.Read);
+            Stream stream = new FileStream($"{lbxInfileList.SelectedItem}", FileMode.Open, FileAccess.Read);
 
 
 
@@ -647,7 +751,7 @@ namespace X12UtilsFRM
 
 
 
-            String outfile = $"{lbxFileList.SelectedItem}.pdf";
+            String outfile = $"{lbxInfileList.SelectedItem}.pdf";
             try
             {
                 if (File.Exists(outfile))
@@ -790,8 +894,15 @@ namespace X12UtilsFRM
         }
         private void btnMap_Click(object sender, EventArgs e)
         {
-            string fileName = lbxFileList.Text;
-            if (Path.GetExtension(fileName) != ".xml")
+            string inputFileName = lbxInfileList.Text;
+            string outputFileName = lbxTargetSchema.Text;
+            if(String.IsNullOrEmpty(inputFileName) || String.IsNullOrEmpty(outputFileName))
+            {
+                MessageBox.Show("Please select both source and target XML files for mapping.");
+                return;
+            }
+
+            if (Path.GetExtension(inputFileName) != ".xml")
             {
                 MessageBox.Show("File extension must be an XML");
                 return;
@@ -802,7 +913,7 @@ namespace X12UtilsFRM
             tabControl1.SelectedIndex = (int)enmTabPages.map;
 
             // Initialize our single embedded layout canvas—No more trvSource duplicate setup!
-            InitializeEmbeddedSchemaLayout(fileName);
+            InitializeEmbeddedSchemaLayout(inputFileName, outputFileName);
         }
         #endregion buttons
         private void Ict_DebugFile(object sender, string e)
@@ -869,14 +980,49 @@ namespace X12UtilsFRM
 
         #endregion treeControls
         #region pnlFunctoids
-        private void pnlFunctoids_DragEnter(object sender, DragEventArgs e)
+
+        private Control ResolveActualTargetNode(Control control, Point clientPt)
         {
-            // If this method name doesn't match the one in your Designer, the cursor won't change.
-            if (e.Data.GetDataPresent(typeof(TreeNode)) || e.Data.GetDataPresent("System.Windows.Forms.TreeNode"))
+            if (control == null) return null;
+
+            // 1. If dropping onto the Skia background surface, check if a control is physically underneath
+            if (control is SkiaMapper)
             {
-                e.Effect = DragDropEffects.Link;
+                // Check functoids and right panel items first
+                foreach (Control c in pnlFunctoids.Controls)
+                {
+                    if (c != _mapper && c.Bounds.Contains(clientPt))
+                    {
+                        return ResolveActualTargetNode(c, clientPt);
+                    }
+                }
             }
+
+            // 2. NEW: If the mouse is over a child label inside a SchemaNodeItem, find its parent row item
+            if (control.Parent is SchemaNodeItem targetSchemaItem)
+            {
+                // Ensure this row item actually lives inside the target panel registry
+                if (flatTargetSchemaRegistry.Contains(targetSchemaItem))
+                {
+                    return targetSchemaItem;
+                }
+            }
+
+            // 3. If the mouse is over a child label inside a Functoid capsule, find its parent functoid
+            if (control.Parent is BizTalkFunctoidNode targetCapsule)
+            {
+                return targetCapsule;
+            }
+
+            // 4. Return the control directly if it's already a valid base target type
+            if (control is BizTalkFunctoidNode || control is SchemaNodeItem)
+            {
+                return control;
+            }
+
+            return control;
         }
+
         private void pnlFunctoids_DragDrop(object sender, DragEventArgs e)
         {
             TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
@@ -929,32 +1075,73 @@ namespace X12UtilsFRM
                 _mapper.Invalidate();
             }
         }
+
+        private void pnlFunctoids_DragEnter(object sender, DragEventArgs e)
+        {
+            // Check if the data being dragged is a TreeNode payload or a Functoid capsule
+            if (e.Data.GetDataPresent(typeof(TreeNode)) || e.Data.GetDataPresent(typeof(BizTalkFunctoidNode)))
+            {
+                e.Effect = DragDropEffects.Copy | DragDropEffects.Link;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+
+
         #endregion pnlFunctoids
+        private void TargetSchemaPanel_DragEnterOrOver(object sender, DragEventArgs e)
+        {
+            // Check if the payload is a Left Tree Node or an active Canvas Functoid
+            if (e.Data.GetDataPresent(typeof(TreeNode)) || e.Data.GetDataPresent(typeof(BizTalkFunctoidNode)))
+            {
+                // Force the OS to display the clean link/drop pointer instead of the disallowed circle!
+                e.Effect = DragDropEffects.Link;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
         private Control CreateFunctoid(string text, Point location)
         {
-            // Instantiation call utilizing our new BizTalk theme profile
             BizTalkFunctoidNode functoidNode = new BizTalkFunctoidNode(text, location);
-
-            // Bind dragging capabilities across all nested control elements
             MakeControlDraggable(functoidNode);
 
-            // Context Menu for right-click deletion
             ContextMenuStrip functoidMenu = new ContextMenuStrip();
-            var deleteItem = new ToolStripMenuItem("Delete Functoid");
 
+            // NEW ITEM: Configure Script Editor
+            var editScriptItem = new ToolStripMenuItem("Configure Script Properties...");
+            editScriptItem.Image = SystemIcons.Question.ToBitmap(); // Add a clean systematic glyph contextually if wanted
+            editScriptItem.Click += (sender, e) =>
+            {
+                // Open our modal dialog window, seeding it with the node's current custom script string
+                using (var editorDlg = new FunctoidScriptEditorForm(functoidNode.FunctoidName, functoidNode.CustomScript))
+                {
+                    if (editorDlg.ShowDialog(this) == DialogResult.OK)
+                    {
+                        // Update the capsule's stored script state with the developer's raw modifications
+                        functoidNode.CustomScript = editorDlg.CompiledScriptText;
+                    }
+                }
+            };
+            functoidMenu.Items.Add(editScriptItem);
+            functoidMenu.Items.Add(new ToolStripSeparator()); // Visual partition bar splitter line
+
+            // Existing Delete Functoid Item
+            var deleteItem = new ToolStripMenuItem("Delete Functoid");
             deleteItem.Click += (sender, e) =>
             {
-                // Drop any connection link tracks tied to this node block
                 _mapper.Connections.RemoveAll(conn => conn.Target == functoidNode || conn.Source == functoidNode);
-
                 pnlFunctoids.Controls.Remove(functoidNode);
                 functoidNode.Dispose();
                 _mapper.Invalidate();
             };
-
             functoidMenu.Items.Add(deleteItem);
 
-            // Assign the deletion menu to the node layout wrapper and its children
+            // Assign context configurations across all nested component areas
             functoidNode.ContextMenuStrip = functoidMenu;
             functoidNode.LblIcon.ContextMenuStrip = functoidMenu;
             functoidNode.LblText.ContextMenuStrip = functoidMenu;
@@ -962,6 +1149,124 @@ namespace X12UtilsFRM
             functoidNode.BringToFront();
             return functoidNode;
         }
+        public string CompileMapToXslt()
+        {
+            StringBuilder xslt = new StringBuilder();
 
+            // 1. Generate the standard BizTalk-compliant XSLT stylesheet headers
+            xslt.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            xslt.AppendLine("<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">");
+            xslt.AppendLine("  <xsl:output method=\"xml\" indent=\"yes\" omit-xml-declaration=\"no\"/>");
+            xslt.AppendLine("  <xsl:strip-space elements=\"*\"/>");
+            xslt.AppendLine();
+
+            // 2. Main Entry Template Match (Targets the inbound root document segment)
+            xslt.AppendLine("  <xsl:template match=\"/\">");
+            xslt.AppendLine("    ");
+
+            // 3. Process every active connection line on the Skia canvas
+            foreach (var conn in _mapper.Connections)
+            {
+                // Resolve the underlying immutable source data node structural footprint
+                if (conn.Source is XmlNode sourceXmlNode)
+                {
+                    // Build the absolute absolute XPath locator string (e.g., Interchange/FunctionalGroup/Transaction/Element)
+                    string sourceXPath = BuildAbsoluteXPath(sourceXmlNode);
+
+                    // CASE A: The line connects to an operational BizTalk Scripting Capsule
+                    if (conn.Target is BizTalkFunctoidNode functoid)
+                    {
+                        string targetNodeName = functoid.FunctoidName.Replace(" ", "_");
+                        string snippet = "";
+
+                        // If the developer has customized the script via the script dialog window, use it
+                        if (!string.IsNullOrEmpty(functoid.CustomScript) && !functoid.CustomScript.Contains("SOURCE_XPATH_PLACEHOLDER"))
+                        {
+                            snippet = functoid.CustomScript;
+                        }
+                        else
+                        {
+                            // Fall back to compiling our standard default rule sets from our compiler factory
+                            snippet = FunctoidXsltCompiler.GetXsltSnippet(functoid.FunctoidName, sourceXPath, targetNodeName);
+                        }
+
+                        // Swap out the placeholder trace with the real computed absolute XPath string
+                        snippet = snippet.Replace("SOURCE_XPATH_PLACEHOLDER", sourceXPath);
+
+                        xslt.AppendLine($"    {snippet}");
+                    }
+                    // CASE B: Direct continuous mapping connection line link case (No intermediate functoid)
+                    else if (conn.Target is SchemaNodeItem targetSchemaItem)
+                    {
+                        string targetNodeName = targetSchemaItem.XmlSourceNode.Name;
+                        string snippet = FunctoidXsltCompiler.GetXsltSnippet("DirectLink", sourceXPath, targetNodeName);
+
+                        xslt.AppendLine($"    {snippet}");
+                    }
+                }
+            }
+
+            xslt.AppendLine("  </xsl:template>");
+            xslt.AppendLine("</xsl:stylesheet>");
+
+            return xslt.ToString();
+        }
+
+        // Helper tool to find whatever control or node feeds into a target capsule's input port
+        private string TraceInputExpression(object targetControl)
+        {
+            foreach (var conn in _mapper.Connections)
+            {
+                if (conn.Target == targetControl)
+                {
+                    if (conn.Source is XmlNode sourceXmlNode)
+                    {
+                        return BuildAbsoluteXPath(sourceXmlNode);
+                    }
+                    else if (conn.Source is BizTalkFunctoidNode parentFunctoid)
+                    {
+                        // RECURSION: Evaluate what is driving the parent functoid first!
+                        string upstreamExpression = TraceInputExpression(parentFunctoid);
+                        string currentTargetName = parentFunctoid.FunctoidName.Replace(" ", "_");
+
+                        // Nest the parent script directly around the upstream value
+                        string rawSnippet = FunctoidXsltCompiler.GetXsltSnippet(parentFunctoid.FunctoidName, "UPSTREAM_PLACEHOLDER", currentTargetName);
+
+                        // Strip outer XML tag structures for inline variable cascading evaluation injection
+                        string pureExpression = ExtractInlineXsltExpression(rawSnippet);
+                        return pureExpression.Replace("UPSTREAM_PLACEHOLDER", upstreamExpression);
+                    }
+                }
+            }
+            return "''"; // Fallback empty string if input path breaks
+        }
+
+        private string ExtractInlineXsltExpression(string xmlSnippet)
+        {
+            // Helper to pull 'translate(...)' or 'normalize-space(...)' out of raw tag sets like <Node><xsl:value-of select="..."/></Node>
+            int start = xmlSnippet.IndexOf("select=\"");
+            if (start == -1) return xmlSnippet;
+            start += 8;
+            int end = xmlSnippet.IndexOf("\"", start);
+            return xmlSnippet.Substring(start, end - start);
+        }
+
+        // HELPER METHOD: Climbs the XML DOM tree recursively to output perfect structural absolute XPaths
+        private string BuildAbsoluteXPath(XmlNode node)
+        {
+            if (node == null || node.NodeType == XmlNodeType.Document)
+                return "";
+
+            // If it's an attribute node, prepend the '@' selector switch character
+            if (node.NodeType == XmlNodeType.Attribute)
+                return BuildAbsoluteXPath(((XmlAttribute)node).OwnerElement) + "/@" + node.Name;
+
+            string parentPath = BuildAbsoluteXPath(node.ParentNode);
+
+            if (string.IsNullOrEmpty(parentPath))
+                return node.Name;
+
+            return parentPath + "/" + node.Name;
+        }
     }
 }

@@ -47,7 +47,7 @@ namespace X12UtilsFRM {
             this.rbHtml = new System.Windows.Forms.RadioButton();
             this.rbXml = new System.Windows.Forms.RadioButton();
             this.btnAddFiles = new System.Windows.Forms.Button();
-            this.lbxFileList = new System.Windows.Forms.ListBox();
+            this.lbxInfileList = new System.Windows.Forms.ListBox();
             this.rtLog = new System.Windows.Forms.RichTextBox();
             this.rtxInterchangeFile = new System.Windows.Forms.RichTextBox();
             this.browser = new System.Windows.Forms.TabPage();
@@ -59,6 +59,7 @@ namespace X12UtilsFRM {
             this.pnlFunctoids = new System.Windows.Forms.Panel();
             this.trvTarget = new System.Windows.Forms.TreeView();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.lbxTargetSchema = new System.Windows.Forms.ListBox();
             this.tabControl1.SuspendLayout();
             this.parse.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -77,7 +78,7 @@ namespace X12UtilsFRM {
             // statusStrip1
             // 
             this.statusStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.statusStrip1.Location = new System.Drawing.Point(0, 545);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 768);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Padding = new System.Windows.Forms.Padding(1, 0, 10, 0);
             this.statusStrip1.Size = new System.Drawing.Size(1298, 22);
@@ -95,7 +96,7 @@ namespace X12UtilsFRM {
             this.tabControl1.Margin = new System.Windows.Forms.Padding(2);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(1298, 545);
+            this.tabControl1.Size = new System.Drawing.Size(1298, 768);
             this.tabControl1.TabIndex = 1;
             this.tabControl1.SelectedIndexChanged += new System.EventHandler(this.tabControl1_SelectedIndexChanged);
             // 
@@ -106,7 +107,7 @@ namespace X12UtilsFRM {
             this.parse.Margin = new System.Windows.Forms.Padding(2);
             this.parse.Name = "parse";
             this.parse.Padding = new System.Windows.Forms.Padding(2);
-            this.parse.Size = new System.Drawing.Size(1290, 519);
+            this.parse.Size = new System.Drawing.Size(1290, 742);
             this.parse.TabIndex = 0;
             this.parse.Text = "Parse";
             this.parse.UseVisualStyleBackColor = true;
@@ -121,6 +122,7 @@ namespace X12UtilsFRM {
             // 
             // splitContainer1.Panel1
             // 
+            this.splitContainer1.Panel1.Controls.Add(this.lbxTargetSchema);
             this.splitContainer1.Panel1.Controls.Add(this.chkBrowse);
             this.splitContainer1.Panel1.Controls.Add(this.btnMap);
             this.splitContainer1.Panel1.Controls.Add(this.btnFindSpec);
@@ -133,13 +135,13 @@ namespace X12UtilsFRM {
             this.splitContainer1.Panel1.Controls.Add(this.label1);
             this.splitContainer1.Panel1.Controls.Add(this.groupBox1);
             this.splitContainer1.Panel1.Controls.Add(this.btnAddFiles);
-            this.splitContainer1.Panel1.Controls.Add(this.lbxFileList);
+            this.splitContainer1.Panel1.Controls.Add(this.lbxInfileList);
             // 
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.rtLog);
             this.splitContainer1.Panel2.Controls.Add(this.rtxInterchangeFile);
-            this.splitContainer1.Size = new System.Drawing.Size(1286, 515);
+            this.splitContainer1.Size = new System.Drawing.Size(1286, 738);
             this.splitContainer1.SplitterDistance = 363;
             this.splitContainer1.SplitterWidth = 3;
             this.splitContainer1.TabIndex = 0;
@@ -149,7 +151,7 @@ namespace X12UtilsFRM {
             this.chkBrowse.AutoSize = true;
             this.chkBrowse.Checked = global::X12UtilsFRM.Properties.Settings.Default.BrowseWhenSelected;
             this.chkBrowse.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "BrowseWhenSelected", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkBrowse.Location = new System.Drawing.Point(15, 235);
+            this.chkBrowse.Location = new System.Drawing.Point(5, 213);
             this.chkBrowse.Name = "chkBrowse";
             this.chkBrowse.Size = new System.Drawing.Size(127, 17);
             this.chkBrowse.TabIndex = 12;
@@ -159,7 +161,7 @@ namespace X12UtilsFRM {
             // btnMap
             // 
             this.btnMap.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnMap.Location = new System.Drawing.Point(15, 443);
+            this.btnMap.Location = new System.Drawing.Point(8, 666);
             this.btnMap.Margin = new System.Windows.Forms.Padding(2);
             this.btnMap.Name = "btnMap";
             this.btnMap.Size = new System.Drawing.Size(158, 34);
@@ -172,7 +174,7 @@ namespace X12UtilsFRM {
             // btnFindSpec
             // 
             this.btnFindSpec.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnFindSpec.Location = new System.Drawing.Point(15, 405);
+            this.btnFindSpec.Location = new System.Drawing.Point(8, 628);
             this.btnFindSpec.Margin = new System.Windows.Forms.Padding(2);
             this.btnFindSpec.Name = "btnFindSpec";
             this.btnFindSpec.Size = new System.Drawing.Size(158, 34);
@@ -185,7 +187,7 @@ namespace X12UtilsFRM {
             // btnHippaParse
             // 
             this.btnHippaParse.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnHippaParse.Location = new System.Drawing.Point(15, 367);
+            this.btnHippaParse.Location = new System.Drawing.Point(8, 590);
             this.btnHippaParse.Margin = new System.Windows.Forms.Padding(2);
             this.btnHippaParse.Name = "btnHippaParse";
             this.btnHippaParse.Size = new System.Drawing.Size(158, 34);
@@ -198,7 +200,7 @@ namespace X12UtilsFRM {
             // button1
             // 
             this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button1.Location = new System.Drawing.Point(15, 329);
+            this.button1.Location = new System.Drawing.Point(8, 552);
             this.button1.Margin = new System.Windows.Forms.Padding(2);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(158, 34);
@@ -210,7 +212,7 @@ namespace X12UtilsFRM {
             // btnParse
             // 
             this.btnParse.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnParse.Location = new System.Drawing.Point(210, 295);
+            this.btnParse.Location = new System.Drawing.Point(203, 518);
             this.btnParse.Margin = new System.Windows.Forms.Padding(2);
             this.btnParse.Name = "btnParse";
             this.btnParse.Size = new System.Drawing.Size(122, 25);
@@ -226,7 +228,7 @@ namespace X12UtilsFRM {
             this.lblInterchangeCount.AutoSize = true;
             this.lblInterchangeCount.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblInterchangeCount.ForeColor = System.Drawing.Color.Red;
-            this.lblInterchangeCount.Location = new System.Drawing.Point(112, 85);
+            this.lblInterchangeCount.Location = new System.Drawing.Point(207, 65);
             this.lblInterchangeCount.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblInterchangeCount.Name = "lblInterchangeCount";
             this.lblInterchangeCount.Size = new System.Drawing.Size(19, 20);
@@ -238,7 +240,7 @@ namespace X12UtilsFRM {
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(4, 85);
+            this.label3.Location = new System.Drawing.Point(88, 65);
             this.label3.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(115, 20);
@@ -272,7 +274,7 @@ namespace X12UtilsFRM {
             this.groupBox1.Controls.Add(this.rbHtml);
             this.groupBox1.Controls.Add(this.rbXml);
             this.groupBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.groupBox1.Location = new System.Drawing.Point(15, 272);
+            this.groupBox1.Location = new System.Drawing.Point(8, 495);
             this.groupBox1.Margin = new System.Windows.Forms.Padding(2);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(2);
@@ -322,15 +324,15 @@ namespace X12UtilsFRM {
             this.btnAddFiles.UseVisualStyleBackColor = true;
             this.btnAddFiles.Click += new System.EventHandler(this.btnAddFiles_Click);
             // 
-            // lbxFileList
+            // lbxInfileList
             // 
-            this.lbxFileList.FormattingEnabled = true;
-            this.lbxFileList.Location = new System.Drawing.Point(8, 108);
-            this.lbxFileList.Margin = new System.Windows.Forms.Padding(2);
-            this.lbxFileList.Name = "lbxFileList";
-            this.lbxFileList.Size = new System.Drawing.Size(356, 121);
-            this.lbxFileList.TabIndex = 0;
-            this.lbxFileList.SelectedIndexChanged += new System.EventHandler(this.lbxFileList_SelectedIndexChanged);
+            this.lbxInfileList.FormattingEnabled = true;
+            this.lbxInfileList.Location = new System.Drawing.Point(5, 87);
+            this.lbxInfileList.Margin = new System.Windows.Forms.Padding(2);
+            this.lbxInfileList.Name = "lbxInfileList";
+            this.lbxInfileList.Size = new System.Drawing.Size(356, 121);
+            this.lbxInfileList.TabIndex = 0;
+            this.lbxInfileList.SelectedIndexChanged += new System.EventHandler(this.lbxInputFileList);
             // 
             // rtLog
             // 
@@ -340,7 +342,7 @@ namespace X12UtilsFRM {
             this.rtLog.ForeColor = System.Drawing.Color.Lime;
             this.rtLog.Location = new System.Drawing.Point(0, 0);
             this.rtLog.Name = "rtLog";
-            this.rtLog.Size = new System.Drawing.Size(920, 515);
+            this.rtLog.Size = new System.Drawing.Size(920, 738);
             this.rtLog.TabIndex = 1;
             this.rtLog.Text = "aaaa";
             // 
@@ -441,11 +443,20 @@ namespace X12UtilsFRM {
             this.trvTarget.Size = new System.Drawing.Size(441, 519);
             this.trvTarget.TabIndex = 1;
             // 
+            // lbxTargetSchema
+            // 
+            this.lbxTargetSchema.FormattingEnabled = true;
+            this.lbxTargetSchema.Location = new System.Drawing.Point(3, 283);
+            this.lbxTargetSchema.Margin = new System.Windows.Forms.Padding(2);
+            this.lbxTargetSchema.Name = "lbxTargetSchema";
+            this.lbxTargetSchema.Size = new System.Drawing.Size(356, 147);
+            this.lbxTargetSchema.TabIndex = 13;
+            // 
             // X12UtilsFRM
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1298, 567);
+            this.ClientSize = new System.Drawing.Size(1298, 790);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.statusStrip1);
             this.Margin = new System.Windows.Forms.Padding(2);
@@ -480,7 +491,7 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.TabPage parse;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.TabPage browser;
-        private System.Windows.Forms.ListBox lbxFileList;
+        private System.Windows.Forms.ListBox lbxInfileList;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.RadioButton rbHtml;
         private System.Windows.Forms.RadioButton rbXml;
@@ -506,6 +517,7 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.TreeView trvTarget;
         private System.Windows.Forms.CheckBox chkBrowse;
         private System.Windows.Forms.Panel pnlFunctoids;
+        private System.Windows.Forms.ListBox lbxTargetSchema;
     }
 }
 

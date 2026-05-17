@@ -113,6 +113,10 @@
     <Compile Include="BiztalkFunctoidNode.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="FunctoidScriptEditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FunctoidXsltCompiler.cs" />
     <Compile Include="SchemaNodeItem.cs">
       <SubType>Component</SubType>
     </Compile>

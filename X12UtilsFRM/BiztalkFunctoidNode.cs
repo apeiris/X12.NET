@@ -6,11 +6,16 @@ namespace X12UtilsFRM
 {
     public class BizTalkFunctoidNode : Panel
     {
+        public string CustomScript { get; set; }
         public string FunctoidName { get; private set; }
         public string FunctoidCategory { get; private set; }
 
         public Label LblIcon { get; private set; }
         public Label LblText { get; private set; }
+
+        // Core tracking variables for drawing cascading links between functoids
+        private Point mouseStartLoc = Point.Empty;
+        private bool trackingForLineConnection = false;
 
         public BizTalkFunctoidNode(string text, Point location)
         {
@@ -80,11 +85,18 @@ namespace X12UtilsFRM
                 Cursor = Cursors.SizeAll
             };
             this.Controls.Add(LblText);
+
+            // Seed initial execution script snippet properties
+            this.CustomScript = FunctoidXsltCompiler.GetXsltSnippet(text, "SOURCE_XPATH_PLACEHOLDER", text.Replace(" ", "_"));
+
+            // 3. Register Drag Line Intercept Listeners contextually across all component layout areas
+            AttachLineDragHooks(this);
+            AttachLineDragHooks(LblIcon);
+            AttachLineDragHooks(LblText);
         }
 
         private string DetermineCategory(string functoidName)
         {
-            // Auto-detect the classification group dynamically based on string naming patterns
             string name = functoidName.ToLower();
             if (name.Contains("string") || name.Contains("concat") || name.Contains("trim") || name.Contains("case"))
                 return "String";
@@ -94,6 +106,41 @@ namespace X12UtilsFRM
                 return "Date";
 
             return "Custom";
+        }
+
+        /// <summary>
+        /// Binds connection dragging hooks recursively so users can Shift+Drag from anywhere on the control.
+        /// </summary>
+        private void AttachLineDragHooks(Control control)
+        {
+            control.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left && Control.ModifierKeys == Keys.Shift)
+                {
+                    trackingForLineConnection = true;
+                    mouseStartLoc = e.Location;
+                }
+            };
+
+            control.MouseMove += (s, e) =>
+            {
+                if (trackingForLineConnection)
+                {
+                    int dx = Math.Abs(e.X - mouseStartLoc.X);
+                    int dy = Math.Abs(e.Y - mouseStartLoc.Y);
+
+                    // Once the mouse slips past system drag sensitivity variables, trip the mapper drop engine
+                    if (dx >= SystemInformation.DragSize.Width || dy >= SystemInformation.DragSize.Height)
+                    {
+                        trackingForLineConnection = false;
+
+                        // Pass THIS entire instance as the underlying link source node reference payload
+                        this.DoDragDrop(this, DragDropEffects.Link);
+                    }
+                }
+            };
+
+            control.MouseUp += (s, e) => { trackingForLineConnection = false; };
         }
     }
 }

@@ -58,29 +58,7 @@ namespace X12UtilsFRM
         }
 
         // NEW HELPER METHOD: Seamlessly finds the correct UI component to map paths to
-        private Control ResolveSourceControl(object source)
-        {
-            if (source is Control ctrl) return ctrl;
-
-            // If it's tracking an XmlNode data instance, look into our side scroll container lane
-            if (source is System.Xml.XmlNode xmlNode && this.Parent != null)
-            {
-                foreach (Control c in this.Parent.Controls)
-                {
-                    if (c is FlowLayoutPanel pnlScroll && (pnlScroll.Name == "pnlSchemaScrollContainer" || pnlScroll.Width == 285))
-                    {
-                        foreach (Control subCtrl in pnlScroll.Controls)
-                        {
-                            if (subCtrl is SchemaNodeItem sni && sni.XmlSourceNode == xmlNode)
-                            {
-                                return sni;
-                            }
-                        }
-                    }
-                }
-            }
-            return null;
-        }
+       
 
         private void CheckForLineRightClick(Point clickPt)
         {
@@ -146,36 +124,160 @@ namespace X12UtilsFRM
             canvas.Clear(SKColors.Transparent);
 
             using (var paint = new SKPaint())
+            using (var textPaint = new SKPaint())
             {
+                // 1. Line Curve Paint Properties
                 paint.Style = SKPaintStyle.Stroke;
                 paint.StrokeWidth = 2;
                 paint.Color = SKColors.DodgerBlue;
                 paint.IsAntialias = true;
 
+                // 2. Text Label Paint Properties
+                textPaint.Color = Color.FromArgb(70, 80, 110).ToSKColor(); // Slate-gray
+                textPaint.TextSize = 10.5f; // Tighter font size for clean side-by-side display
+                textPaint.IsAntialias = true;
+                textPaint.Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold);
+                textPaint.TextAlign = SKTextAlign.Center;
+
                 foreach (var conn in Connections)
                 {
-                    // CRITICAL FIX: Resolve visual control reference dynamically
                     var visualSource = ResolveSourceControl(conn.Source);
+                    var visualTarget = conn.Target as Control; // Fallback resolve for standard controls
+
                     var start = GetControlPoint(visualSource, isSource: true);
-                    var end = GetControlPoint(conn.Target as Control, isSource: false);
+                    var end = GetControlPoint(visualTarget, isSource: false);
 
                     if (start != SKPoint.Empty && end != SKPoint.Empty)
                     {
-                        DrawBezierLine(canvas, paint, start, end);
+                        // --- RESOLVE SOURCE LABEL STRING ---
+                        string sourceLabelText = "";
+                        if (conn.Source is System.Xml.XmlNode srcXmlNode)
+                        {
+                            sourceLabelText = srcXmlNode.Name;
+                        }
+                        else if (visualSource is SchemaNodeItem srcSni)
+                        {
+                            sourceLabelText = srcSni.XmlSourceNode.Name;
+                        }
+                        else if (visualSource is BizTalkFunctoidNode srcFunctoid)
+                        {
+                            sourceLabelText = srcFunctoid.FunctoidName;
+                        }
+
+                        // --- RESOLVE TARGET LABEL STRING ---
+                        string targetLabelText = "dddddd";
+                        if (conn.Target is SchemaNodeItem tgtSni)
+                        {
+                            targetLabelText = tgtSni.XmlSourceNode.Name;
+                        }
+                        else if (visualTarget is BizTalkFunctoidNode tgtFunctoid)
+                        {
+                            targetLabelText = tgtFunctoid.FunctoidName;
+                        }
+
+                        // Draw the line with both structural labels attached!
+                        DrawBezierLine(canvas, paint, textPaint, start, end, sourceLabelText, targetLabelText);
                     }
                 }
             }
         }
 
-        private void DrawBezierLine(SKCanvas canvas, SKPaint paint, SKPoint start, SKPoint end)
+        private void DrawBezierLine(SKCanvas canvas, SKPaint paint, SKPaint textPaint, SKPoint start, SKPoint end, string sourceLabel, string targetLabel)
         {
+            float controlOffset = Math.Abs(start.X - end.X) / 2;
+
+            SKPoint p0 = start;
+            SKPoint p1 = new SKPoint(start.X + controlOffset, start.Y);
+            SKPoint p2 = new SKPoint(end.X - controlOffset, end.Y);
+            SKPoint p3 = end;
+
+            // A. Draw the main Bezier curve link line
             using (var path = new SKPath())
             {
                 path.MoveTo(start);
-                float controlOffset = Math.Abs(start.X - end.X) / 2;
-                path.CubicTo(start.X + controlOffset, start.Y, end.X - controlOffset, end.Y, end.X, end.Y);
+                path.CubicTo(p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y);
                 canvas.DrawPath(path, paint);
             }
+
+            // B. Render Source Label Badge near the first third mark (t = 0.30)
+            if (!string.IsNullOrEmpty(sourceLabel))
+            {
+                SKPoint pointOnCurve = GetCubicBezierPoint(0.30f, p0, p1, p2, p3);
+                DrawLabelBadge(canvas, textPaint, pointOnCurve, sourceLabel);
+            }
+
+            // C. Render Target Label Badge near the last third mark (t = 0.70)
+            if (!string.IsNullOrEmpty(targetLabel))
+            {
+                SKPoint pointOnCurve = GetCubicBezierPoint(0.70f, p0, p1, p2, p3);
+                DrawLabelBadge(canvas, textPaint, pointOnCurve, targetLabel);
+            }
+        }
+
+        // HELPER: Calculates exact XY positions along a Cubic Bezier curve at a given 't' percentage split
+        private SKPoint GetCubicBezierPoint(float t, SKPoint p0, SKPoint p1, SKPoint p2, SKPoint p3)
+        {
+            float u = 1 - t;
+            float tt = t * t;
+            float uu = u * u;
+            float uuu = uu * u;
+            float ttt = tt * t;
+
+            float x = uuu * p0.X + 3 * uu * t * p1.X + 3 * u * tt * p2.X + ttt * p3.X;
+            float y = uuu * p0.Y + 3 * uu * t * p1.Y + 3 * u * tt * p2.Y + ttt * p3.Y;
+
+            return new SKPoint(x, y);
+        }
+
+        // HELPER: Renders a clean white protective text capsule card over the line layout canvas
+        private void DrawLabelBadge(SKCanvas canvas, SKPaint textPaint, SKPoint position, string text)
+        {
+            float textWidth = textPaint.MeasureText(text);
+
+            // Draw background masking box so intersecting lines do not cut through the text characters
+            using (var bgPaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill })
+            {
+                var bgRect = new SKRect(position.X - (textWidth / 2) - 5, position.Y - 13, position.X + (textWidth / 2) + 5, position.Y + 3);
+                canvas.DrawRoundRect(bgRect, 4, 4, bgPaint);
+            }
+
+            // Print the clean centered text label
+            canvas.DrawText(text, position.X, position.Y - 1, textPaint);
+        }
+        private Control ResolveSourceControl(object source)
+        {
+            if (source is Control ctrl) return ctrl;
+
+            if (source is System.Xml.XmlNode xmlNode && this.Parent != null)
+            {
+                // 1. Scan Left Column (Source Schema Tree Pane Container)
+                foreach (Control c in this.Parent.Controls)
+                {
+                    if (c is FlowLayoutPanel pnlScroll && pnlScroll.Name == "pnlSchemaScrollContainer")
+                    {
+                        foreach (Control subCtrl in pnlScroll.Controls)
+                        {
+                            if (subCtrl is SchemaNodeItem sni && sni.XmlSourceNode == xmlNode)
+                            {
+                                return sni;
+                            }
+                        }
+                    }
+
+                    // 2. Scan Right Column (Target Schema Tree Pane Container)
+                    if (c is FlowLayoutPanel pnlTargetScroll && pnlTargetScroll.Name == "pnlTargetSchemaScrollContainer")
+                    {
+                        foreach (Control subCtrl in pnlTargetScroll.Controls)
+                        {
+                            if (subCtrl is SchemaNodeItem sni && sni.XmlSourceNode == xmlNode)
+                            {
+                                return sni;
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
         private SKPoint GetControlPoint(Control ctrl, bool isSource)
@@ -184,8 +286,11 @@ namespace X12UtilsFRM
 
             try
             {
+                // If it's a source, line should emerge from the RIGHT edge. 
+                // If it's a target, line should snap into the LEFT edge.
                 int targetX = isSource ? ctrl.Width : 0;
                 Point localAnchorPt = new Point(targetX, ctrl.Height / 2);
+
                 Point screenPt = ctrl.PointToScreen(localAnchorPt);
                 Point localPt = this.PointToClient(screenPt);
 
@@ -196,6 +301,7 @@ namespace X12UtilsFRM
                 return SKPoint.Empty;
             }
         }
+        
     }
 
     public class MappingConnection

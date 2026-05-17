@@ -21,7 +21,7 @@ namespace X12UtilsFRM
             this.FunctoidTemplates = functoids;
             this._onStateChanged = onStateChanged;
 
-            this.Width = 220; // Slightly narrower to safely clear parent scrollbars
+            this.Width = 205; // Lock the base category width tightly
             this.BackColor = Color.Transparent;
 
             // 1. Category Header Label
@@ -43,15 +43,13 @@ namespace X12UtilsFRM
             // 2. Content Flow Panel for Functoids
             pnlContent = new FlowLayoutPanel
             {
-                // FIX A: Remove DockStyle.Fill! Use Top anchoring and manual positioning instead.
                 Location = new Point(0, lblHeader.Height),
-                Width = this.Width,
+                Width = this.Width, // Enforce strict fixed width tracking
                 BackColor = Color.FromArgb(250, 250, 252),
-                Padding = new Padding(6),
+                Padding = new Padding(6, 4, 6, 4),
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                AutoSize = true, // FIX B: Let it resize itself naturally to fit its rows!
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                AutoSize = false, // CRITICAL FIX: Turn off AutoSize so it stops expanding horizontally!
                 Visible = false
             };
 
@@ -62,14 +60,34 @@ namespace X12UtilsFRM
             }
 
             this.Controls.Add(pnlContent);
-
-            // Explicitly force layout tree depth stacking ordering
             this.Controls.SetChildIndex(lblHeader, 0);
             this.Controls.SetChildIndex(pnlContent, 1);
 
             UpdateHeight();
         }
 
+        public void UpdateHeight()
+        {
+            if (!IsExpanded)
+            {
+                this.Height = lblHeader.Height;
+            }
+            else
+            {
+                // Force inner flow layout boundaries to match the parent category container perfectly
+                pnlContent.Width = this.Width;
+
+                // Force the layout engine to calculate wrapping rows based on the rigid fixed width bounds
+                pnlContent.PerformLayout();
+
+                // Ask the layout engine how much vertical space it needs for the wrapped grid rows
+                Size neededSize = pnlContent.GetPreferredSize(new Size(pnlContent.Width, 0));
+
+                // Apply the computed height constraints directly to both container layers
+                pnlContent.Height = neededSize.Height;
+                this.Height = lblHeader.Height + pnlContent.Height + 4;
+            }
+        }
         private Label CreateTemplateItem(string text)
         {
             Label lbl = new Label
@@ -79,29 +97,27 @@ namespace X12UtilsFRM
                 BackColor = Color.LightSteelBlue,
                 BorderStyle = BorderStyle.FixedSingle,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Size = new Size(92, 28), // Safe button size matrix
-                Margin = new Padding(4),
+                // FIX B: Shrink item size from 92px down to 90px wide.
+                // (2 buttons * 90px) + margins + padding fits beautifully in a 210px container!
+                Size = new Size(90, 28),
+                Margin = new Padding(3),
                 Cursor = Cursors.Hand
             };
 
-            // Smart Drag-Size Threshold Logic
+            // Keep your smart drag-size tracking logic intact...
             Point mouseDownLocation = Point.Empty;
             bool isPotentialDrag = false;
 
-            lbl.MouseDown += (s, e) => {
-                if (e.Button == MouseButtons.Left)
-                {
-                    isPotentialDrag = true;
-                    mouseDownLocation = e.Location;
-                }
+            lbl.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left) { isPotentialDrag = true; mouseDownLocation = e.Location; }
             };
-
-            lbl.MouseMove += (s, e) => {
+            lbl.MouseMove += (s, e) =>
+            {
                 if (isPotentialDrag)
                 {
                     int deltaX = Math.Abs(e.X - mouseDownLocation.X);
                     int deltaY = Math.Abs(e.Y - mouseDownLocation.Y);
-
                     if (deltaX >= SystemInformation.DragSize.Width || deltaY >= SystemInformation.DragSize.Height)
                     {
                         isPotentialDrag = false;
@@ -110,7 +126,6 @@ namespace X12UtilsFRM
                     }
                 }
             };
-
             lbl.MouseUp += (s, e) => { if (e.Button == MouseButtons.Left) isPotentialDrag = false; };
 
             return lbl;
@@ -125,21 +140,7 @@ namespace X12UtilsFRM
             UpdateHeight();
             _onStateChanged?.Invoke();
         }
-
-        public void UpdateHeight()
-        {
-            if (!IsExpanded)
-            {
-                this.Height = lblHeader.Height;
-            }
-            else
-            {
-                // Force the layout engine to resolve auto-size parameters instantly
-                pnlContent.PerformLayout();
-
-                // FIX C: Calculate height strictly based on the real size of the auto-sized content panel
-                this.Height = lblHeader.Height + pnlContent.Height + 4;
-            }
-        }
     }
 }
+
+    
