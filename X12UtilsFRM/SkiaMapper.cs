@@ -469,14 +469,20 @@ namespace X12UtilsFRM
 
                         // 2. Identify contextual types for badge rules
                         bool isSourceSchema = (visualSource is SchemaNodeItem) || (conn.Source is XmlNode);
+                        bool isTargetSchema = (visualTarget is SchemaNodeItem) || (conn.Target is XmlNode);
                         bool isSourceFunctoid = visualSource is BizTalkFunctoidNode;
                         bool isTargetFunctoid = visualTarget is BizTalkFunctoidNode;
 
-                        // --- LABEL VISIBILITY ENGINE ---
+                        // --- REVISED LABEL VISIBILITY ENGINE ---
                         if (isSourceSchema)
                         {
-                            // Rule 1: Lines dragging out of the left source schema drop the second target label completely
+                            // Rule 1: Lines dragging out of the left source schema drop the target label completely
                             targetLabelText = string.Empty;
+                        }
+                        else if (isTargetSchema)
+                        {
+                            // Rule 4: Lines landing on the right target schema (reverse drag drop) drop the first source label completely
+                            sourceLabelText = string.Empty;
                         }
                         else if (isSourceFunctoid && isTargetFunctoid)
                         {
@@ -486,7 +492,7 @@ namespace X12UtilsFRM
                         }
                         else if (!string.IsNullOrEmpty(sourceLabelText) && sourceLabelText == targetLabelText)
                         {
-                            // Rule 3: Deduplicate identical label text instances if any catch-all conditions clip names
+                            // Rule 3: Deduplicate identical label text instances if names match exactly
                             sourceLabelText = string.Empty;
                         }
 
