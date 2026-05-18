@@ -47,6 +47,10 @@ namespace X12UtilsFRM
         private bool _isDraggingFunctoid = false;
         private Point _dragStartMousePos;
         private Point _dragStartControlPos;
+        private Form _detachedWorkspaceWindow = null;
+        private Point _originalPanelLocation;
+        private Size _originalPanelSize;
+        private AnchorStyles _originalPanelAnchor;
 
         List<Interchange> interchanges = null;
         ToolTip tt = null;
@@ -192,6 +196,84 @@ namespace X12UtilsFRM
 
         #region Drag and Drop Handling Logic
 
+
+        private void ToggleWorkspaceDetachment()
+        {
+            // If the workspace isn't detached yet, pop it out into its own separate OS window
+            if (_detachedWorkspaceWindow == null)
+            {
+                // 1. Cache the original layout positions so we can restore them cleanly later
+                _originalPanelLocation = pnlFunctoids.Location;
+                _originalPanelSize = pnlFunctoids.Size;
+                _originalPanelAnchor = pnlFunctoids.Anchor;
+
+                // 2. Instantiate a brand new tool window container frame
+                _detachedWorkspaceWindow = new Form
+                {
+                    Text = "X12 Schema Mapping Studio - Detached Workspace",
+                    Size = new Size(1200, 800),
+                    StartPosition = FormStartPosition.CenterScreen,
+                    FormBorderStyle = FormBorderStyle.SizableToolWindow, // Gives it a clean tool panel border
+                    MinimizeBox = false
+                };
+
+                // Ensure that if the developer clicks the "X" button on the floating window, 
+                // it intercepts destruction and re-docks itself back to the parent form safely.
+                _detachedWorkspaceWindow.FormClosing += (s, e) =>
+                {
+                    if (e.CloseReason == CloseReason.UserClosing)
+                    {
+                        e.Cancel = true; // Abort form disposal
+                        ReDockWorkspaceToMainForm();
+                    }
+                };
+
+                // 3. Tear the workspace out of the primary main form control tree
+                this.Controls.Remove(pnlFunctoids);
+
+                // 4. Mount it into the detached window container frame
+                _detachedWorkspaceWindow.Controls.Add(pnlFunctoids);
+                pnlFunctoids.Dock = DockStyle.Fill; // Let it expand to the whole size of the window
+
+                // 5. Display the window to the user (passing 'this' keeps it grouped on top of the app)
+                _detachedWorkspaceWindow.Show(this);
+
+                // 6. Force Skia to recalculate boundaries based on the new dimensions
+                _mapper.RecalculateVirtualLayout();
+                _mapper.Invalidate();
+            }
+            else
+            {
+                // If it's already detached, call the reverse re-dock method
+                ReDockWorkspaceToMainForm();
+            }
+        }
+
+        private void ReDockWorkspaceToMainForm()
+        {
+            if (_detachedWorkspaceWindow != null)
+            {
+                // 1. Strip the panel out of the detached floating frame container
+                _detachedWorkspaceWindow.Controls.Remove(pnlFunctoids);
+
+                // 2. Destroy the temporary floating form window frame manager safely
+                _detachedWorkspaceWindow.Dispose();
+                _detachedWorkspaceWindow = null;
+
+                // 3. Restore the panel control back into its original spot on the main app form
+                pnlFunctoids.Dock = DockStyle.None;
+                pnlFunctoids.Location = _originalPanelLocation;
+                pnlFunctoids.Size = _originalPanelSize;
+                pnlFunctoids.Anchor = _originalPanelAnchor;
+
+                this.Controls.Add(pnlFunctoids);
+                pnlFunctoids.BringToFront();
+
+                // 4. Refresh the virtual split positions
+                _mapper.RecalculateVirtualLayout();
+                _mapper.Invalidate();
+            }
+        }
         private void MakeControlDraggable(Control masterControl)
         {
             AttachDragEvents(masterControl, masterControl);
