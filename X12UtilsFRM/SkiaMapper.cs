@@ -18,11 +18,10 @@ namespace X12UtilsFRM
         private const int DragThreshold = 5;
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        // --- NEW: INFINITE FLOATING CANVAS TRACKERS ---
+        // --- INFINITE FLOATING CANVAS TRACKERS ---
         private SKPoint _canvasPanOffset = new SKPoint(0, 0);
         private Point _lastMousePosition;
         private bool _isPanningCanvas = false;
-        // ----------------------------------------------
 
         // Canvas Data Models
         public List<MappingConnection> Connections { get; set; } = new List<MappingConnection>();
@@ -137,11 +136,7 @@ namespace X12UtilsFRM
 
                 if (start != SKPoint.Empty && end != SKPoint.Empty)
                 {
-                    // Factor in panning matrix when analyzing right clicks over lines
-                    SKPoint startPanned = new SKPoint(start.X + _canvasPanOffset.X, start.Y + _canvasPanOffset.Y);
-                    SKPoint endPanned = new SKPoint(end.X + _canvasPanOffset.X, end.Y + _canvasPanOffset.Y);
-
-                    if (IsPointNearBezier(skClick, startPanned, endPanned, 8.0f))
+                    if (IsPointNearBezier(skClick, start, end, 8.0f))
                     {
                         _selectedConnectionForDelete = conn;
                         _lineContextMenu.Show(Cursor.Position);
@@ -258,7 +253,7 @@ namespace X12UtilsFRM
             {
                 _isDraggingRightSplitter = true;
             }
-            // MMB or Left Click + Space triggers layout engine canvas panning shifts
+            // MMB or Left Click + Space triggers canvas panning
             else if (e.Button == MouseButtons.Middle || (e.Button == MouseButtons.Left && Control.ModifierKeys == Keys.Space))
             {
                 if (_centerCanvasRegion.Bounds.Contains(e.X, e.Y))
@@ -292,7 +287,7 @@ namespace X12UtilsFRM
 
         private void Mapper_MouseMove(object sender, MouseEventArgs e)
         {
-            // 1. Handle Infinite Canvas Panning Translations
+            // 1. Handle Infinite Canvas Panning Transformations
             if (_isPanningCanvas)
             {
                 float deltaX = e.X - _lastMousePosition.X;
@@ -301,7 +296,7 @@ namespace X12UtilsFRM
 
                 _canvasPanOffset = new SKPoint(_canvasPanOffset.X + deltaX, _canvasPanOffset.Y + deltaY);
 
-                // Dynamically translate all physical Functoid custom controls resting in the parent panel container
+                // Dynamically translate all physical Functoid custom controls
                 if (this.Parent != null)
                 {
                     foreach (Control ctrl in this.Parent.Controls)
@@ -406,11 +401,12 @@ namespace X12UtilsFRM
         {
             canvas.Save();
 
-            // Clip rendering specifically to avoid connection lines drawing on top of side tree bars
+            // Clip rendering to the center canvas area
             canvas.ClipRect(_centerCanvasRegion.Bounds);
 
-            // Shift drawing canvas alignment to follow infinite panning coordinates matrix
-            canvas.Translate(_canvasPanOffset.X, _canvasPanOffset.Y);
+            // --- FIX: REMOVED canvas.Translate HERE ---
+            // Panning physically relocates the WinForms controls, so our lines should 
+            // be drawn directly in standard coordinate space to prevent double-offset skewing!
 
             using (var paint = new SKPaint())
             using (var textPaint = new SKPaint())
@@ -443,60 +439,43 @@ namespace X12UtilsFRM
                         if (matchingTarget != null) visualTarget = matchingTarget;
                     }
 
-                    // Subtract the pan offset when reading control coordinates to avoid double-offset drift
+                    // Look up coordinates (returns absolute positions relative to the canvas control)
                     var start = GetControlPoint(visualSource, isSource: true);
                     var end = GetControlPoint(visualTarget, isSource: false);
 
-                    if (visualSource is SchemaNodeItem)
-                    {
-                        start.X -= _canvasPanOffset.X;
-                        start.Y -= _canvasPanOffset.Y;
-                    }
-                    if (visualTarget is SchemaNodeItem)
-                    {
-                        end.X -= _canvasPanOffset.X;
-                        end.Y -= _canvasPanOffset.Y;
-                    }
-
                     if (start != SKPoint.Empty && end != SKPoint.Empty)
                     {
-                        // 1. Extract raw label text safely based on underlying node types
+                        // Extract label texts based on type configurations
                         string sourceLabelText = visualSource is SchemaNodeItem srcSni ? srcSni.XmlSourceNode.Name :
                                                 visualSource is BizTalkFunctoidNode srcFunctoid ? srcFunctoid.FunctoidName : "";
 
                         string targetLabelText = visualTarget is SchemaNodeItem tgtSni ? tgtSni.XmlSourceNode.Name :
                                                 visualTarget is BizTalkFunctoidNode tgtFunctoid ? tgtFunctoid.FunctoidName : "";
 
-                        // 2. Identify contextual types for badge rules
                         bool isSourceSchema = (visualSource is SchemaNodeItem) || (conn.Source is XmlNode);
                         bool isTargetSchema = (visualTarget is SchemaNodeItem) || (conn.Target is XmlNode);
                         bool isSourceFunctoid = visualSource is BizTalkFunctoidNode;
                         bool isTargetFunctoid = visualTarget is BizTalkFunctoidNode;
 
-                        // --- REVISED LABEL VISIBILITY ENGINE ---
+                        // Apply visibility filters
                         if (isSourceSchema)
                         {
-                            // Rule 1: Lines dragging out of the left source schema drop the target label completely
                             targetLabelText = string.Empty;
                         }
                         else if (isTargetSchema)
                         {
-                            // Rule 4: Lines landing on the right target schema (reverse drag drop) drop the first source label completely
                             sourceLabelText = string.Empty;
                         }
                         else if (isSourceFunctoid && isTargetFunctoid)
                         {
-                            // Rule 2: Inter-functoid jumps suppress both badges to prevent center canvas clutter
                             sourceLabelText = string.Empty;
                             targetLabelText = string.Empty;
                         }
                         else if (!string.IsNullOrEmpty(sourceLabelText) && sourceLabelText == targetLabelText)
                         {
-                            // Rule 3: Deduplicate identical label text instances if names match exactly
                             sourceLabelText = string.Empty;
                         }
 
-                        // Render the final Bezier vector with the calculated badge flags
                         DrawBezierLine(canvas, paint, textPaint, start, end, sourceLabelText, targetLabelText);
                     }
                 }
@@ -583,6 +562,7 @@ namespace X12UtilsFRM
                     int targetX = isSource ? ctrl.Width : 0;
                     Point localAnchorPt = new Point(targetX, ctrl.Height / 2);
 
+                    // Convert position straight into local mapper canvas coordinate map space
                     Point screenPt = ctrl.PointToScreen(localAnchorPt);
                     Point localPt = this.PointToClient(screenPt);
 
@@ -604,12 +584,14 @@ namespace X12UtilsFRM
             return value;
         }
     }
+
     public class MappingConnection
     {
         public object Source { get; set; }
         public object Target { get; set; }
         public SKColor LineColor { get; set; } = SKColors.DodgerBlue;
     }
+
     public class VirtualRegion
     {
         public string Name { get; set; }
