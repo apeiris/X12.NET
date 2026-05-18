@@ -6,12 +6,13 @@ using System.Xml;
 
 namespace X12UtilsFRM
 {
-    public class SchemaNodeItem : Panel
+    public class SchemaNodeItem : UserControl
     {
         public XmlNode XmlSourceNode { get; private set; }
         public List<SchemaNodeItem> ChildNodes { get; set; } = new List<SchemaNodeItem>();
-        public bool IsExpanded { get; private set; } = true;
+        public bool IsExpanded { get;  set; } 
         public int IndentLevel { get; set; } = 0;
+        public int Depth { get; private set; }
 
         private Label lblToggle;
         private Label lblText;
@@ -19,10 +20,10 @@ namespace X12UtilsFRM
         private Point _mouseDownLocation;
         private bool _isPotentialDrag = false;
 
-        public SchemaNodeItem(XmlNode xmlNode, int indent, Action<SchemaNodeItem> onStateChanged)
+        public SchemaNodeItem(XmlNode xmlNode, int depth, Action<SchemaNodeItem> onStateChanged)
         {
             this.XmlSourceNode = xmlNode;
-            this.IndentLevel = indent;
+            this.Depth = depth;
             this._onStateChanged = onStateChanged;
 
             this.Height = 28;
@@ -37,7 +38,7 @@ namespace X12UtilsFRM
                     Text = "▼",
                     Font = new Font("Segoe UI", 8, FontStyle.Bold),
                     Size = new Size(16, 16),
-                    Location = new Point(5 + (indent * 15), 6),
+                    Location = new Point(5 + (Depth * 15), 6),
                     Cursor = Cursors.Hand,
                     TextAlign = ContentAlignment.MiddleCenter
                 };
@@ -51,7 +52,7 @@ namespace X12UtilsFRM
                 Text = xmlNode.Name,
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 AutoSize = true,
-                Location = new Point((lblToggle != null ? 22 : 10) + (indent * 15), 5),
+                Location = new Point((lblToggle != null ? 22 : 10) + (Depth * 15), 5),
                 Cursor = Cursors.Hand
             };
 

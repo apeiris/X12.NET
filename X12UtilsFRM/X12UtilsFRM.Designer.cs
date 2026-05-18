@@ -33,6 +33,7 @@ namespace X12UtilsFRM {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.parse = new System.Windows.Forms.TabPage();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.lbxTargetSchema = new System.Windows.Forms.ListBox();
             this.chkBrowse = new System.Windows.Forms.CheckBox();
             this.btnMap = new System.Windows.Forms.Button();
             this.btnFindSpec = new System.Windows.Forms.Button();
@@ -55,11 +56,9 @@ namespace X12UtilsFRM {
             this.FormLocations = new System.Windows.Forms.TabPage();
             this.rtLocations = new System.Windows.Forms.RichTextBox();
             this.tbpMap = new System.Windows.Forms.TabPage();
-            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.pnlFunctoids = new System.Windows.Forms.Panel();
             this.trvTarget = new System.Windows.Forms.TreeView();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.lbxTargetSchema = new System.Windows.Forms.ListBox();
             this.tabControl1.SuspendLayout();
             this.parse.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -70,9 +69,6 @@ namespace X12UtilsFRM {
             this.browser.SuspendLayout();
             this.FormLocations.SuspendLayout();
             this.tbpMap.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
-            this.splitContainer2.Panel1.SuspendLayout();
-            this.splitContainer2.SuspendLayout();
             this.SuspendLayout();
             // 
             // statusStrip1
@@ -145,6 +141,15 @@ namespace X12UtilsFRM {
             this.splitContainer1.SplitterDistance = 363;
             this.splitContainer1.SplitterWidth = 3;
             this.splitContainer1.TabIndex = 0;
+            // 
+            // lbxTargetSchema
+            // 
+            this.lbxTargetSchema.FormattingEnabled = true;
+            this.lbxTargetSchema.Location = new System.Drawing.Point(3, 283);
+            this.lbxTargetSchema.Margin = new System.Windows.Forms.Padding(2);
+            this.lbxTargetSchema.Name = "lbxTargetSchema";
+            this.lbxTargetSchema.Size = new System.Drawing.Size(356, 147);
+            this.lbxTargetSchema.TabIndex = 13;
             // 
             // chkBrowse
             // 
@@ -362,7 +367,7 @@ namespace X12UtilsFRM {
             this.browser.Margin = new System.Windows.Forms.Padding(2);
             this.browser.Name = "browser";
             this.browser.Padding = new System.Windows.Forms.Padding(2);
-            this.browser.Size = new System.Drawing.Size(1290, 519);
+            this.browser.Size = new System.Drawing.Size(1290, 742);
             this.browser.TabIndex = 1;
             this.browser.Text = "Browser";
             this.browser.UseVisualStyleBackColor = true;
@@ -375,7 +380,7 @@ namespace X12UtilsFRM {
             this.webBrowser1.Margin = new System.Windows.Forms.Padding(2);
             this.webBrowser1.MinimumSize = new System.Drawing.Size(15, 16);
             this.webBrowser1.Name = "webBrowser1";
-            this.webBrowser1.Size = new System.Drawing.Size(1286, 515);
+            this.webBrowser1.Size = new System.Drawing.Size(1286, 738);
             this.webBrowser1.TabIndex = 0;
             // 
             // FormLocations
@@ -384,7 +389,7 @@ namespace X12UtilsFRM {
             this.FormLocations.Location = new System.Drawing.Point(4, 22);
             this.FormLocations.Name = "FormLocations";
             this.FormLocations.Padding = new System.Windows.Forms.Padding(3);
-            this.FormLocations.Size = new System.Drawing.Size(1290, 519);
+            this.FormLocations.Size = new System.Drawing.Size(1290, 742);
             this.FormLocations.TabIndex = 2;
             this.FormLocations.Text = "Form locations";
             this.FormLocations.UseVisualStyleBackColor = true;
@@ -397,39 +402,26 @@ namespace X12UtilsFRM {
             this.rtLocations.ForeColor = System.Drawing.Color.Lime;
             this.rtLocations.Location = new System.Drawing.Point(3, 3);
             this.rtLocations.Name = "rtLocations";
-            this.rtLocations.Size = new System.Drawing.Size(1284, 513);
+            this.rtLocations.Size = new System.Drawing.Size(1284, 736);
             this.rtLocations.TabIndex = 2;
             this.rtLocations.Text = "aaaa";
             // 
             // tbpMap
             // 
-            this.tbpMap.Controls.Add(this.splitContainer2);
+            this.tbpMap.Controls.Add(this.pnlFunctoids);
             this.tbpMap.Location = new System.Drawing.Point(4, 22);
             this.tbpMap.Name = "tbpMap";
-            this.tbpMap.Size = new System.Drawing.Size(1290, 519);
+            this.tbpMap.Size = new System.Drawing.Size(1290, 742);
             this.tbpMap.TabIndex = 3;
             this.tbpMap.Text = "Mapper";
             this.tbpMap.UseVisualStyleBackColor = true;
-            // 
-            // splitContainer2
-            // 
-            this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer2.Location = new System.Drawing.Point(0, 0);
-            this.splitContainer2.Name = "splitContainer2";
-            // 
-            // splitContainer2.Panel1
-            // 
-            this.splitContainer2.Panel1.Controls.Add(this.pnlFunctoids);
-            this.splitContainer2.Size = new System.Drawing.Size(1290, 519);
-            this.splitContainer2.SplitterDistance = 430;
-            this.splitContainer2.TabIndex = 0;
             // 
             // pnlFunctoids
             // 
             this.pnlFunctoids.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlFunctoids.Location = new System.Drawing.Point(0, 0);
             this.pnlFunctoids.Name = "pnlFunctoids";
-            this.pnlFunctoids.Size = new System.Drawing.Size(430, 519);
+            this.pnlFunctoids.Size = new System.Drawing.Size(1290, 742);
             this.pnlFunctoids.TabIndex = 0;
             this.pnlFunctoids.DragDrop += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragDrop);
             this.pnlFunctoids.DragEnter += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragEnter);
@@ -442,15 +434,6 @@ namespace X12UtilsFRM {
             this.trvTarget.Name = "trvTarget";
             this.trvTarget.Size = new System.Drawing.Size(441, 519);
             this.trvTarget.TabIndex = 1;
-            // 
-            // lbxTargetSchema
-            // 
-            this.lbxTargetSchema.FormattingEnabled = true;
-            this.lbxTargetSchema.Location = new System.Drawing.Point(3, 283);
-            this.lbxTargetSchema.Margin = new System.Windows.Forms.Padding(2);
-            this.lbxTargetSchema.Name = "lbxTargetSchema";
-            this.lbxTargetSchema.Size = new System.Drawing.Size(356, 147);
-            this.lbxTargetSchema.TabIndex = 13;
             // 
             // X12UtilsFRM
             // 
@@ -476,9 +459,6 @@ namespace X12UtilsFRM {
             this.browser.ResumeLayout(false);
             this.FormLocations.ResumeLayout(false);
             this.tbpMap.ResumeLayout(false);
-            this.splitContainer2.Panel1.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
-            this.splitContainer2.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -513,7 +493,6 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.RichTextBox rtLocations;
         private System.Windows.Forms.Button btnMap;
         private System.Windows.Forms.TabPage tbpMap;
-        private System.Windows.Forms.SplitContainer splitContainer2;
         private System.Windows.Forms.TreeView trvTarget;
         private System.Windows.Forms.CheckBox chkBrowse;
         private System.Windows.Forms.Panel pnlFunctoids;

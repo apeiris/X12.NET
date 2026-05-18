@@ -118,7 +118,7 @@
     </Compile>
     <Compile Include="FunctoidXsltCompiler.cs" />
     <Compile Include="SchemaNodeItem.cs">
-      <SubType>Component</SubType>
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="SkiaMapper.cs">
       <SubType>Component</SubType>
