@@ -44,6 +44,10 @@ namespace X12UtilsFRM
         private const int ToolboxWidth = 245;
 
         // Draggable capsule tracking properties
+
+        private bool _isDraggingToolbox = false;
+        private Point _toolboxDragStartMousePos;
+        private Point _toolboxDragStartPanelPos;
         private bool _isDraggingFunctoid = false;
         private Point _dragStartMousePos;
         private Point _dragStartControlPos;
@@ -98,16 +102,19 @@ namespace X12UtilsFRM
 
         private void InitializeToolbox()
         {
+            // 1. Create the main wrapper panel. Remove Anchor properties so it can move freely.
             pnlToolboxWrapper = new Panel
             {
                 Width = ToolboxWidth + 20,
-                Location = new Point(pnlFunctoids.Width - (ToolboxWidth + 20), 0),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right,
-                BackColor = Color.Transparent
+                Height = pnlFunctoids.Height - 40, // Give it a nice padding from top/bottom
+                Location = new Point(pnlFunctoids.Width - (ToolboxWidth + 40), 20),
+                BackColor = Color.FromArgb(235, 240, 250), // Give it a solid background so canvas lines don't bleed through
+                BorderStyle = BorderStyle.FixedSingle
             };
             pnlFunctoids.Controls.Add(pnlToolboxWrapper);
             pnlToolboxWrapper.BringToFront();
 
+            // 2. Create the toggle button on the left edge of the toolbox wrapper
             btnToolboxToggle = new Button
             {
                 Text = "»",
@@ -115,7 +122,7 @@ namespace X12UtilsFRM
                 Width = 20,
                 Dock = DockStyle.Left,
                 FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(220, 225, 235),
+                BackColor = Color.FromArgb(210, 215, 225),
                 ForeColor = Color.FromArgb(50, 50, 80),
                 Cursor = Cursors.Hand
             };
@@ -123,6 +130,7 @@ namespace X12UtilsFRM
             btnToolboxToggle.Click += ToggleToolbox_Click;
             pnlToolboxWrapper.Controls.Add(btnToolboxToggle);
 
+            // 3. Create the container where categories flow vertically
             pnlToolboxCategoriesContainer = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -130,10 +138,15 @@ namespace X12UtilsFRM
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(20, 20, 20, 20)
+                Padding = new Padding(10, 10, 10, 10)
             };
             pnlToolboxWrapper.Controls.Add(pnlToolboxCategoriesContainer);
             pnlToolboxCategoriesContainer.BringToFront();
+
+            // --- NEW: WIRE UP DRAG-TO-MOVE EVENTS ---
+            // Let the user drag the toolbox by holding and dragging the toggle button assembly strip
+            AttachToolboxDragEvents(btnToolboxToggle);
+            // ----------------------------------------
 
             var stringTools = new List<string> { "Concatenate", "String Left", "String Right", "Trim", "Uppercase", "Lowercase" };
             var mathTools = new List<string> { "Add", "Subtract", "Multiply", "Divide", "Modulus", "Absolute" };
@@ -148,7 +161,50 @@ namespace X12UtilsFRM
 
             RenderToolboxLayout();
         }
+        private void AttachToolboxDragEvents(Control dragHandle)
+        {
+            dragHandle.MouseDown += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    _isDraggingToolbox = true;
+                    _toolboxDragStartMousePos = Cursor.Position;
+                    _toolboxDragStartPanelPos = pnlToolboxWrapper.Location;
+                    pnlToolboxWrapper.BringToFront();
+                }
+            };
 
+            dragHandle.MouseMove += (sender, e) =>
+            {
+                if (_isDraggingToolbox)
+                {
+                    int deltaX = Cursor.Position.X - _toolboxDragStartMousePos.X;
+                    int deltaY = Cursor.Position.Y - _toolboxDragStartMousePos.Y;
+
+                    // Compute the new target position
+                    int newX = _toolboxDragStartPanelPos.X + deltaX;
+                    int newY = _toolboxDragStartPanelPos.Y + deltaY;
+
+                    // Optional: Clamp the toolbox so it can't be dragged completely off screen edges
+                    if (pnlFunctoids != null)
+                    {
+                        newX = Math.Max(0, Math.Min(newX, pnlFunctoids.Width - pnlToolboxWrapper.Width));
+                        newY = Math.Max(0, Math.Min(newY, pnlFunctoids.Height - 30));
+                    }
+
+                    pnlToolboxWrapper.Location = new Point(newX, newY);
+                    _mapper.Invalidate(); // Refresh lines to redraw cleanly around it
+                }
+            };
+
+            dragHandle.MouseUp += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    _isDraggingToolbox = false;
+                }
+            };
+        }
         private void RenderToolboxLayout()
         {
             if (pnlToolboxCategoriesContainer == null) return;
@@ -174,17 +230,17 @@ namespace X12UtilsFRM
 
             if (_isToolboxExpanded)
             {
+                // Expand outward keeping its current X coordinate placement intact
                 pnlToolboxWrapper.Width = ToolboxWidth + 20;
-                pnlToolboxWrapper.Location = new Point(pnlFunctoids.Width - pnlToolboxWrapper.Width, 0);
                 pnlToolboxCategoriesContainer.Visible = true;
                 btnToolboxToggle.Text = "»";
                 RenderToolboxLayout();
             }
             else
             {
+                // Collapse down to just show the little grab handle tab bar
                 pnlToolboxCategoriesContainer.Visible = false;
                 pnlToolboxWrapper.Width = btnToolboxToggle.Width;
-                pnlToolboxWrapper.Location = new Point(pnlFunctoids.Width - pnlToolboxWrapper.Width, 0);
                 btnToolboxToggle.Text = "«";
             }
 
