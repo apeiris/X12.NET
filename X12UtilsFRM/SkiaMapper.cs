@@ -583,6 +583,48 @@ namespace X12UtilsFRM
             if (value > max) return max;
             return value;
         }
+        public static void DrawToolboxIcon(SKCanvas canvas, SKPoint position, float size, SKColor color)
+        {
+            using (var paint = new SKPaint())
+            {
+                paint.Style = SKPaintStyle.Stroke;
+                paint.StrokeWidth = size * 0.1f;
+                paint.Color = color;
+                paint.IsAntialias = true;
+                paint.StrokeCap = SKStrokeCap.Round;
+                paint.StrokeJoin = SKStrokeJoin.Round;
+
+                // 1. Draw main toolbox body container box
+                float boxWidth = size;
+                float boxHeight = size * 0.7f;
+                var bodyRect = new SKRect(
+                    position.X - boxWidth / 2f,
+                    position.Y - boxHeight / 2f + (size * 0.1f),
+                    position.X + boxWidth / 2f,
+                    position.Y + boxHeight / 2f + (size * 0.1f)
+                );
+                canvas.DrawRoundRect(bodyRect, size * 0.1f, size * 0.1f, paint);
+
+                // 2. Draw top handle attachment loop
+                using (var handlePath = new SKPath())
+                {
+                    handlePath.MoveTo(position.X - size * 0.25f, bodyRect.Top);
+                    handlePath.LineTo(position.X - size * 0.25f, bodyRect.Top - size * 0.2f);
+                    handlePath.LineTo(position.X + size * 0.25f, bodyRect.Top - size * 0.2f);
+                    handlePath.LineTo(position.X + size * 0.25f, bodyRect.Top);
+                    canvas.DrawPath(handlePath, paint);
+                }
+
+                // 3. Draw central latch point accent line
+                canvas.DrawLine(
+                    position.X,
+                    bodyRect.Top,
+                    position.X,
+                    bodyRect.Top + (boxHeight * 0.3f),
+                    paint
+                );
+            }
+        }
     }
 
     public class MappingConnection
@@ -599,4 +641,6 @@ namespace X12UtilsFRM
         public float ScrollOffset { get; set; } = 0;
         public float MaxScrollHeight { get; set; } = 0;
     }
+
+
 }

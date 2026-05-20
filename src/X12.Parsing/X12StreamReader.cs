@@ -22,12 +22,16 @@
     /// <param name="stream"><see cref="Stream"/> used for reading</param>
     /// <param name="encoding"><see cref="Encoding"/> used for properly reading the stream</param>
     /// <param name="ignoredChars">Array of characters to be ignored while reading</param>
+    /// 
+
+
     public X12StreamReader(Stream stream, Encoding encoding, char[] ignoredChars)
     {
       this.reader = new StreamReader(stream, encoding);
       var header = new char[106];
       if (this.reader.Read(header, 0, 106) < 106)
       {
+       
         throw new ArgumentException(Resources.X12ReaderInvalidHeader);
       }
 

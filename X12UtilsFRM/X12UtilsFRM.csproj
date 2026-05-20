@@ -117,6 +117,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="FunctoidXsltCompiler.cs" />
+    <Compile Include="XsltMapGenerator.cs" />
     <Compile Include="SchemaNodeItem.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -152,6 +153,7 @@
       <DependentUpon>X12UtilsFRM.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <Content Include="InstitutionalClaim5010.xslt" />
     <Content Include="NLog.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
