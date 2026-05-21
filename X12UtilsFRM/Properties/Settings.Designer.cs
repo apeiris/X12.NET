@@ -109,25 +109,73 @@ namespace X12UtilsFRM.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool BrowseWhenClicked {
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ParseToXML {
             get {
-                return ((bool)(this["BrowseWhenClicked"]));
+                return ((bool)(this["ParseToXML"]));
             }
             set {
-                this["BrowseWhenClicked"] = value;
+                this["ParseToXML"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool BrowseWhenSelected {
+        public bool ParseToHTML {
             get {
-                return ((bool)(this["BrowseWhenSelected"]));
+                return ((bool)(this["ParseToHTML"]));
             }
             set {
-                this["BrowseWhenSelected"] = value;
+                this["ParseToHTML"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool chkBrowseCheked {
+            get {
+                return ((bool)(this["chkBrowseCheked"]));
+            }
+            set {
+                this["chkBrowseCheked"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool chkTargetSchemaChecked {
+            get {
+                return ((bool)(this["chkTargetSchemaChecked"]));
+            }
+            set {
+                this["chkTargetSchemaChecked"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int SelectedInfile {
+            get {
+                return ((int)(this["SelectedInfile"]));
+            }
+            set {
+                this["SelectedInfile"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int SelectedTargetSchema {
+            get {
+                return ((int)(this["SelectedTargetSchema"]));
+            }
+            set {
+                this["SelectedTargetSchema"] = value;
             }
         }
     }

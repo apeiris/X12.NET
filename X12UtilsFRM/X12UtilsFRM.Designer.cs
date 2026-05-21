@@ -33,9 +33,7 @@ namespace X12UtilsFRM {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.parse = new System.Windows.Forms.TabPage();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.chkTargetSchema = new System.Windows.Forms.CheckBox();
             this.lbxTargetSchema = new System.Windows.Forms.ListBox();
-            this.chkBrowse = new System.Windows.Forms.CheckBox();
             this.btnMap = new System.Windows.Forms.Button();
             this.btnFindSpec = new System.Windows.Forms.Button();
             this.btnHippaParse = new System.Windows.Forms.Button();
@@ -46,14 +44,15 @@ namespace X12UtilsFRM {
             this.lblSelectedFile = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.rbHtml = new System.Windows.Forms.RadioButton();
-            this.rbXml = new System.Windows.Forms.RadioButton();
             this.btnAddFiles = new System.Windows.Forms.Button();
             this.lbxInfileList = new System.Windows.Forms.ListBox();
             this.rtLog = new System.Windows.Forms.RichTextBox();
             this.rtxInterchangeFile = new System.Windows.Forms.RichTextBox();
             this.browser = new System.Windows.Forms.TabPage();
+            this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
+            this.lblSaveAs = new System.Windows.Forms.Label();
             this.webBrowser1 = new System.Windows.Forms.WebBrowser();
+            this.label2 = new System.Windows.Forms.Label();
             this.FormLocations = new System.Windows.Forms.TabPage();
             this.rtLocations = new System.Windows.Forms.RichTextBox();
             this.tbpMap = new System.Windows.Forms.TabPage();
@@ -62,10 +61,10 @@ namespace X12UtilsFRM {
             this.btnGenerateXsltFromCanvas = new System.Windows.Forms.Button();
             this.trvTarget = new System.Windows.Forms.TreeView();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
-            this.label2 = new System.Windows.Forms.Label();
-            this.lblSaveAs = new System.Windows.Forms.Label();
+            this.rbHtml = new System.Windows.Forms.RadioButton();
+            this.rbXml = new System.Windows.Forms.RadioButton();
+            this.button2 = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.parse.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -74,10 +73,11 @@ namespace X12UtilsFRM {
             this.splitContainer1.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.browser.SuspendLayout();
+            this.tableLayoutPanel2.SuspendLayout();
             this.FormLocations.SuspendLayout();
             this.tbpMap.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
-            this.tableLayoutPanel2.SuspendLayout();
+            this.pnlFunctoids.SuspendLayout();
             this.SuspendLayout();
             // 
             // statusStrip1
@@ -127,9 +127,7 @@ namespace X12UtilsFRM {
             // 
             // splitContainer1.Panel1
             // 
-            this.splitContainer1.Panel1.Controls.Add(this.chkTargetSchema);
             this.splitContainer1.Panel1.Controls.Add(this.lbxTargetSchema);
-            this.splitContainer1.Panel1.Controls.Add(this.chkBrowse);
             this.splitContainer1.Panel1.Controls.Add(this.btnMap);
             this.splitContainer1.Panel1.Controls.Add(this.btnFindSpec);
             this.splitContainer1.Panel1.Controls.Add(this.btnHippaParse);
@@ -152,39 +150,15 @@ namespace X12UtilsFRM {
             this.splitContainer1.SplitterWidth = 3;
             this.splitContainer1.TabIndex = 0;
             // 
-            // chkTargetSchema
-            // 
-            this.chkTargetSchema.AutoSize = true;
-            this.chkTargetSchema.Checked = global::X12UtilsFRM.Properties.Settings.Default.BrowseWhenSelected;
-            this.chkTargetSchema.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "BrowseWhenSelected", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkTargetSchema.Location = new System.Drawing.Point(5, 435);
-            this.chkTargetSchema.Name = "chkTargetSchema";
-            this.chkTargetSchema.Size = new System.Drawing.Size(127, 17);
-            this.chkTargetSchema.TabIndex = 14;
-            this.chkTargetSchema.Text = "Brows when selected";
-            this.chkTargetSchema.UseVisualStyleBackColor = true;
-            // 
             // lbxTargetSchema
             // 
             this.lbxTargetSchema.FormattingEnabled = true;
-            this.lbxTargetSchema.Location = new System.Drawing.Point(3, 283);
+            this.lbxTargetSchema.Location = new System.Drawing.Point(2, 283);
             this.lbxTargetSchema.Margin = new System.Windows.Forms.Padding(2);
             this.lbxTargetSchema.Name = "lbxTargetSchema";
-            this.lbxTargetSchema.Size = new System.Drawing.Size(356, 147);
+            this.lbxTargetSchema.Size = new System.Drawing.Size(356, 186);
             this.lbxTargetSchema.TabIndex = 13;
             this.lbxTargetSchema.SelectedIndexChanged += new System.EventHandler(this.lbxfileList_SelectedIndexChanged);
-            // 
-            // chkBrowse
-            // 
-            this.chkBrowse.AutoSize = true;
-            this.chkBrowse.Checked = global::X12UtilsFRM.Properties.Settings.Default.BrowseWhenSelected;
-            this.chkBrowse.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "BrowseWhenSelected", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkBrowse.Location = new System.Drawing.Point(5, 213);
-            this.chkBrowse.Name = "chkBrowse";
-            this.chkBrowse.Size = new System.Drawing.Size(127, 17);
-            this.chkBrowse.TabIndex = 12;
-            this.chkBrowse.Text = "Brows when selected";
-            this.chkBrowse.UseVisualStyleBackColor = true;
             // 
             // btnMap
             // 
@@ -311,33 +285,6 @@ namespace X12UtilsFRM {
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Transform..";
             // 
-            // rbHtml
-            // 
-            this.rbHtml.AutoSize = true;
-            this.rbHtml.Checked = true;
-            this.rbHtml.Location = new System.Drawing.Point(68, 24);
-            this.rbHtml.Margin = new System.Windows.Forms.Padding(2);
-            this.rbHtml.Name = "rbHtml";
-            this.rbHtml.Size = new System.Drawing.Size(74, 24);
-            this.rbHtml.TabIndex = 1;
-            this.rbHtml.TabStop = true;
-            this.rbHtml.Text = "HTML";
-            this.rbHtml.UseVisualStyleBackColor = true;
-            this.rbHtml.CheckedChanged += new System.EventHandler(this.rbHtml_CheckedChanged);
-            // 
-            // rbXml
-            // 
-            this.rbXml.AutoSize = true;
-            this.rbXml.Location = new System.Drawing.Point(4, 24);
-            this.rbXml.Margin = new System.Windows.Forms.Padding(2);
-            this.rbXml.Name = "rbXml";
-            this.rbXml.Size = new System.Drawing.Size(63, 24);
-            this.rbXml.TabIndex = 0;
-            this.rbXml.TabStop = true;
-            this.rbXml.Text = "XML";
-            this.rbXml.UseVisualStyleBackColor = true;
-            this.rbXml.CheckedChanged += new System.EventHandler(this.rbXml_CheckedChanged);
-            // 
             // btnAddFiles
             // 
             this.btnAddFiles.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -355,10 +302,10 @@ namespace X12UtilsFRM {
             // lbxInfileList
             // 
             this.lbxInfileList.FormattingEnabled = true;
-            this.lbxInfileList.Location = new System.Drawing.Point(5, 87);
+            this.lbxInfileList.Location = new System.Drawing.Point(4, 87);
             this.lbxInfileList.Margin = new System.Windows.Forms.Padding(2);
             this.lbxInfileList.Name = "lbxInfileList";
-            this.lbxInfileList.Size = new System.Drawing.Size(356, 121);
+            this.lbxInfileList.Size = new System.Drawing.Size(356, 186);
             this.lbxInfileList.TabIndex = 0;
             this.lbxInfileList.SelectedIndexChanged += new System.EventHandler(this.lbxfileList_SelectedIndexChanged);
             // 
@@ -395,6 +342,37 @@ namespace X12UtilsFRM {
             this.browser.Text = "Browser";
             this.browser.UseVisualStyleBackColor = true;
             // 
+            // tableLayoutPanel2
+            // 
+            this.tableLayoutPanel2.ColumnCount = 2;
+            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 1467F));
+            this.tableLayoutPanel2.Controls.Add(this.lblSaveAs, 1, 0);
+            this.tableLayoutPanel2.Controls.Add(this.webBrowser1, 0, 1);
+            this.tableLayoutPanel2.Controls.Add(this.label2, 0, 0);
+            this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel2.Location = new System.Drawing.Point(2, 2);
+            this.tableLayoutPanel2.Name = "tableLayoutPanel2";
+            this.tableLayoutPanel2.RowCount = 3;
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(1533, 719);
+            this.tableLayoutPanel2.TabIndex = 1;
+            // 
+            // lblSaveAs
+            // 
+            this.lblSaveAs.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblSaveAs.AutoSize = true;
+            this.lblSaveAs.Location = new System.Drawing.Point(69, 0);
+            this.lblSaveAs.Name = "lblSaveAs";
+            this.lblSaveAs.Size = new System.Drawing.Size(53, 25);
+            this.lblSaveAs.TabIndex = 2;
+            this.lblSaveAs.Text = "lblSaveas";
+            this.lblSaveAs.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // webBrowser1
             // 
             this.webBrowser1.AllowWebBrowserDrop = false;
@@ -406,6 +384,18 @@ namespace X12UtilsFRM {
             this.webBrowser1.Name = "webBrowser1";
             this.webBrowser1.Size = new System.Drawing.Size(1529, 670);
             this.webBrowser1.TabIndex = 0;
+            // 
+            // label2
+            // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(3, 0);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(53, 25);
+            this.label2.TabIndex = 1;
+            this.label2.Text = "Save As..";
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // FormLocations
             // 
@@ -445,29 +435,31 @@ namespace X12UtilsFRM {
             this.tableLayoutPanel1.ColumnCount = 1;
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.Controls.Add(this.pnlFunctoids, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.btnGenerateXsltFromCanvas, 0, 1);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 2;
+            this.tableLayoutPanel1.RowCount = 3;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 35F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel1.Size = new System.Drawing.Size(1537, 723);
             this.tableLayoutPanel1.TabIndex = 1;
             // 
             // pnlFunctoids
             // 
+            this.pnlFunctoids.Controls.Add(this.button2);
+            this.pnlFunctoids.Controls.Add(this.btnGenerateXsltFromCanvas);
             this.pnlFunctoids.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlFunctoids.Location = new System.Drawing.Point(3, 3);
             this.pnlFunctoids.Name = "pnlFunctoids";
-            this.pnlFunctoids.Size = new System.Drawing.Size(1531, 682);
+            this.pnlFunctoids.Size = new System.Drawing.Size(1531, 662);
             this.pnlFunctoids.TabIndex = 0;
             this.pnlFunctoids.DragDrop += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragDrop);
             this.pnlFunctoids.DragEnter += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragEnter);
             // 
             // btnGenerateXsltFromCanvas
             // 
-            this.btnGenerateXsltFromCanvas.Location = new System.Drawing.Point(3, 691);
+            this.btnGenerateXsltFromCanvas.Location = new System.Drawing.Point(106, 630);
             this.btnGenerateXsltFromCanvas.Name = "btnGenerateXsltFromCanvas";
             this.btnGenerateXsltFromCanvas.Size = new System.Drawing.Size(97, 29);
             this.btnGenerateXsltFromCanvas.TabIndex = 1;
@@ -478,58 +470,50 @@ namespace X12UtilsFRM {
             // trvTarget
             // 
             this.trvTarget.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.trvTarget.LineColor = System.Drawing.Color.Empty;
             this.trvTarget.Location = new System.Drawing.Point(0, 0);
             this.trvTarget.Name = "trvTarget";
             this.trvTarget.Size = new System.Drawing.Size(441, 519);
             this.trvTarget.TabIndex = 1;
             // 
-            // tableLayoutPanel2
-            // 
-            this.tableLayoutPanel2.ColumnCount = 2;
-            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 1467F));
-            this.tableLayoutPanel2.Controls.Add(this.lblSaveAs, 1, 0);
-            this.tableLayoutPanel2.Controls.Add(this.webBrowser1, 0, 1);
-            this.tableLayoutPanel2.Controls.Add(this.label2, 0, 0);
-            this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tableLayoutPanel2.Location = new System.Drawing.Point(2, 2);
-            this.tableLayoutPanel2.Name = "tableLayoutPanel2";
-            this.tableLayoutPanel2.RowCount = 3;
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(1533, 719);
-            this.tableLayoutPanel2.TabIndex = 1;
-            // 
             // saveFileDialog1
             // 
             this.saveFileDialog1.DefaultExt = "Save As..";
             // 
-            // label2
+            // rbHtml
             // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(3, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(53, 25);
-            this.label2.TabIndex = 1;
-            this.label2.Text = "Save As..";
-            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.rbHtml.AutoSize = true;
+            this.rbHtml.Checked = global::X12UtilsFRM.Properties.Settings.Default.ParseToHTML;
+            this.rbHtml.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "ParseToHTML", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.rbHtml.Location = new System.Drawing.Point(68, 24);
+            this.rbHtml.Margin = new System.Windows.Forms.Padding(2);
+            this.rbHtml.Name = "rbHtml";
+            this.rbHtml.Size = new System.Drawing.Size(74, 24);
+            this.rbHtml.TabIndex = 1;
+            this.rbHtml.Text = "HTML";
+            this.rbHtml.UseVisualStyleBackColor = true;
             // 
-            // lblSaveAs
+            // rbXml
             // 
-            this.lblSaveAs.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.lblSaveAs.AutoSize = true;
-            this.lblSaveAs.Location = new System.Drawing.Point(69, 0);
-            this.lblSaveAs.Name = "lblSaveAs";
-            this.lblSaveAs.Size = new System.Drawing.Size(53, 25);
-            this.lblSaveAs.TabIndex = 2;
-            this.lblSaveAs.Text = "lblSaveas";
-            this.lblSaveAs.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.rbXml.AutoSize = true;
+            this.rbXml.Checked = global::X12UtilsFRM.Properties.Settings.Default.ParseToXML;
+            this.rbXml.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "ParseToXML", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.rbXml.Location = new System.Drawing.Point(4, 24);
+            this.rbXml.Margin = new System.Windows.Forms.Padding(2);
+            this.rbXml.Name = "rbXml";
+            this.rbXml.Size = new System.Drawing.Size(63, 24);
+            this.rbXml.TabIndex = 0;
+            this.rbXml.TabStop = true;
+            this.rbXml.Text = "XML";
+            this.rbXml.UseVisualStyleBackColor = true;
+            // 
+            // button2
+            // 
+            this.button2.Location = new System.Drawing.Point(3, 630);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(97, 29);
+            this.button2.TabIndex = 2;
+            this.button2.Text = "Transform";
+            this.button2.UseVisualStyleBackColor = true;
             // 
             // X12UtilsFRM
             // 
@@ -553,11 +537,12 @@ namespace X12UtilsFRM {
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.browser.ResumeLayout(false);
+            this.tableLayoutPanel2.ResumeLayout(false);
+            this.tableLayoutPanel2.PerformLayout();
             this.FormLocations.ResumeLayout(false);
             this.tbpMap.ResumeLayout(false);
             this.tableLayoutPanel1.ResumeLayout(false);
-            this.tableLayoutPanel2.ResumeLayout(false);
-            this.tableLayoutPanel2.PerformLayout();
+            this.pnlFunctoids.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -593,16 +578,15 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.Button btnMap;
         private System.Windows.Forms.TabPage tbpMap;
         private System.Windows.Forms.TreeView trvTarget;
-        private System.Windows.Forms.CheckBox chkBrowse;
         private System.Windows.Forms.Panel pnlFunctoids;
         private System.Windows.Forms.ListBox lbxTargetSchema;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Button btnGenerateXsltFromCanvas;
-        private System.Windows.Forms.CheckBox chkTargetSchema;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label lblSaveAs;
+        private System.Windows.Forms.Button button2;
     }
 }
 

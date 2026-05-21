@@ -1,8 +1,12 @@
-﻿using System;
+﻿using NLog.Targets;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Xml;
-using System.Linq;
-using System.Collections.Generic;
+using X12UtilsFRM;
+using System.Text.Json;
+using System.IO;
 
 namespace PdfX.App.Services
 {
@@ -14,11 +18,6 @@ namespace PdfX.App.Services
         {
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-
-        /// <summary>
-        /// CONSOLIDATED LOGIC: Moved directly inside the generator class.
-        /// Recursively constructs the absolute XPath for a given XML node or attribute.
-        /// </summary>
         private string BuildAbsoluteXPath(XmlNode node)
         {
             if (node == null || node.NodeType == XmlNodeType.Document) return "";
@@ -28,29 +27,17 @@ namespace PdfX.App.Services
             string parentPath = BuildAbsoluteXPath(node.ParentNode);
             return string.IsNullOrEmpty(parentPath) ? node.Name : parentPath + "/" + node.Name;
         }
-
-        /// <summary>
-        /// Builds the complete XSLT map layout based entirely on internal logic.
-        /// </summary>
-        /// <param name="sourceFileName">Name of the input source data file context.</param>
-        /// <param name="xsltFileName">Name of this mapping XSLT file to associate.</param>
-        public string GenerateXsltFromCanvas(
-            string sourceFileName = "unknown_source_payload.xml",
-            string xsltFileName = "BizTalkTransformMap.xslt")
+        public string GenerateXsltFromCanvas(string sourceFileName = "unknown_source_payload.xml", string xsltFileName = "BizTalkTransformMap.xslt")
         {
             if (_mapper.Connections == null || _mapper.Connections.Count == 0)
             {
                 return string.Empty;
             }
-
             if (!string.IsNullOrEmpty(sourceFileName) && (sourceFileName.Contains("\\") || sourceFileName.Contains("/")))
                 sourceFileName = System.IO.Path.GetFileName(sourceFileName);
-
             if (!string.IsNullOrEmpty(xsltFileName) && (xsltFileName.Contains("\\") || xsltFileName.Contains("/")))
                 xsltFileName = System.IO.Path.GetFileName(xsltFileName);
-
             StringBuilder xslt = new StringBuilder();
-
             // 1. Core Header Definitions
             xslt.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             xslt.AppendLine("<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" ");
@@ -61,13 +48,11 @@ namespace PdfX.App.Services
             xslt.AppendLine("                version=\"1.0\">");
             xslt.AppendLine("  <xsl:output method=\"xml\" omit-xml-declaration=\"no\" indent=\"yes\" />");
             xslt.AppendLine();
-
             // 2. Global Metadata Parameters
             xslt.AppendLine("  ");
             xslt.AppendLine($"  <xsl:param name=\"SourceFileName\" select=\"'{sourceFileName}'\" />");
             xslt.AppendLine($"  <xsl:param name=\"XsltFileName\" select=\"'{xsltFileName}'\" />");
             xslt.AppendLine();
-
             // 3. Root Template Match Entry Point with Processing Instruction
             xslt.AppendLine("  <xsl:template match=\"/\">");
             xslt.AppendLine("    <xsl:processing-instruction name=\"xml-stylesheet\">");
@@ -78,40 +63,30 @@ namespace PdfX.App.Services
             xslt.AppendLine("    <xsl:apply-templates select=\"/*\" />");
             xslt.AppendLine("  </xsl:template>");
             xslt.AppendLine();
-
             var flatSchemaRegistry = (IEnumerable<dynamic>)_mapper.FlatSchemaRegistry;
             var flatTargetSchemaRegistry = (IEnumerable<dynamic>)_mapper.FlatTargetSchemaRegistry;
             var connections = (IEnumerable<dynamic>)_mapper.Connections;
-
             string sourceRootName = flatSchemaRegistry.FirstOrDefault()?.XmlSourceNode.Name ?? "SOURCE_ROOT";
             string targetRootName = flatTargetSchemaRegistry.FirstOrDefault()?.XmlSourceNode.Name ?? "ROOT";
-
             xslt.AppendLine($"  <xsl:template match=\"{sourceRootName}\">");
             xslt.AppendLine($"    <{targetRootName}>");
             xslt.AppendLine("      <XSLT_NAME><xsl:value-of select=\"$XsltFileName\" /></XSLT_NAME>");
             xslt.AppendLine();
-
             int variableCounter = 1;
             Dictionary<string, string> uniqueScriptMethodsRegistry = new Dictionary<string, string>();
-
             var targetBoundConnections = connections.Where(c =>
                 c.Target is XmlNode || c.Target.GetType().Name == "SchemaNodeItem").ToList();
-
             foreach (var conn in targetBoundConnections)
             {
                 XmlNode targetXmlNode = conn.Target is XmlNode xmlTgt ? xmlTgt : conn.Target.XmlSourceNode;
                 if (targetXmlNode == null) continue;
-
                 xslt.AppendLine($"      <{targetXmlNode.Name}>");
-
-                // CASE A: Direct Link (Now calling internal BuildAbsoluteXPath method)
                 if (conn.Source is XmlNode || conn.Source.GetType().Name == "SchemaNodeItem")
                 {
                     XmlNode srcXmlNode = conn.Source is XmlNode xmlSrc ? xmlSrc : conn.Source.XmlSourceNode;
                     string structuralXPath = BuildAbsoluteXPath(srcXmlNode).Replace(sourceRootName + "/", "");
                     xslt.AppendLine($"        <xsl:value-of select=\"{structuralXPath}\" />");
                 }
-                // CASE B: Series-Connected Functoid Chain
                 else if (conn.Source.GetType().Name == "BizTalkFunctoidNode")
                 {
                     string varName = $"var:v{variableCounter}";
@@ -122,13 +97,10 @@ namespace PdfX.App.Services
                         uniqueScriptMethodsRegistry,
                         connections
                     );
-
                     xslt.AppendLine($"        <xsl:variable name=\"{varName}\" select=\"{inlineExpressionCall}\" />");
                     xslt.AppendLine($"        <xsl:value-of select=\"${varName}\" />");
-
                     variableCounter++;
                 }
-
                 xslt.AppendLine($"      </{targetXmlNode.Name}>");
             }
 
@@ -238,6 +210,48 @@ namespace PdfX.App.Services
             }
 
             return $"userCSharp:{functionName}({string.Join(", ", optimizedArguments)})";
+        }
+
+        public void SaveCanvasLayout(string outputJsonFilePath, string sourcePath, string targetPath)
+        {
+            var state = new CanvasSaveState
+            {
+                SourceSchemaFile = sourcePath,
+                TargetSchemaFile = targetPath
+            };
+
+            var connections = (IEnumerable<dynamic>)_mapper.Connections;
+
+            // Extract arbitrary Functoids dropped on the layout grid
+            // Modify based on how your _mapper registers canvas items
+            foreach (var conn in connections)
+            {
+                if (conn.Source.GetType().Name == "BizTalkFunctoidNode")
+                {
+                    if (!state.Functoids.Any(f => f.Id == conn.Source.Id.ToString()))
+                    {
+                        state.Functoids.Add(new CanvasFunctoidDto
+                        {
+                            Id = conn.Source.Id.ToString(),
+                            FunctoidName = conn.Source.FunctoidName,
+                            X = (float)conn.Source.X,
+                            Y = (float)conn.Source.Y
+                        });
+                    }
+                }
+
+                // Map out the visual lines (Wires)
+                state.Wires.Add(new CanvasConnectionDto
+                {
+                    SourceType = conn.Source is XmlNode ? "SchemaNode" : "Functoid",
+                    SourceIdOrXPath = conn.Source is XmlNode xmlSrc ? BuildAbsoluteXPath(xmlSrc) : conn.Source.Id.ToString(),
+                    TargetType = conn.Target is XmlNode ? "SchemaNode" : "Functoid",
+                    TargetIdOrXPath = conn.Target is XmlNode xmlTgt ? BuildAbsoluteXPath(xmlTgt) : conn.Target.Id.ToString()
+                });
+            }
+
+            string jsonString = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(outputJsonFilePath, jsonString);
         }
     }
 }

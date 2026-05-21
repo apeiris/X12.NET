@@ -35,11 +35,9 @@ namespace X12UtilsFRM
         formLocations,
         map
     }
-
     public partial class X12UtilsFRM : Form
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         private SkiaMapper _mapper;
         private List<ToolboxCategory> toolboxCategories = new List<ToolboxCategory>();
         private Panel pnlToolboxContainer = null;
@@ -48,13 +46,10 @@ namespace X12UtilsFRM
         private Button btnToolboxToggle = null;
         private bool _isToolboxExpanded = true;
         private const int ToolboxWidth = 245;
-
         private Button btnToolboxVerticalToggle = null;
         private bool _isToolboxExpandedVertical = true;
         private int _originalFloatingHeight = 400; // Default expanded height memory
-
         // Draggable capsule tracking properties
-
         private bool _isDraggingToolbox = false;
         private Point _toolboxDragStartMousePos;
         private Point _toolboxDragStartPanelPos;
@@ -65,13 +60,11 @@ namespace X12UtilsFRM
         private Point _originalPanelLocation;
         private Size _originalPanelSize;
         private AnchorStyles _originalPanelAnchor;
-
         List<Interchange> interchanges = null;
         ToolTip tt = null;
         private string locationsFile = "";
         private static readonly string TestImageDirectory = @"..\..\..\tests\X12.Hipaa.Tests.Unit\Claims\TestData\Images\";
         static readonly string pdfOutDirectory = @"C:\Temp\Pdfs";
-
         public X12UtilsFRM()
         {
             InitializeComponent();
@@ -100,16 +93,18 @@ namespace X12UtilsFRM
             _mapper.DragEnter += pnlFunctoids_DragEnter;
             _mapper.DragOver += pnlFunctoids_DragEnter;
             _mapper.DragDrop += pnlFunctoids_DragDrop;
-        }
+         
 
+          
+
+
+        }
         private static void Log(String s, [CallerMemberName] string cn = "", [CallerLineNumber] int ln = 0, [CallerFilePath] string fp = "")
         {
             Trace.WriteLine($"{DateTime.Now.ToString()}-{cn}@{fp.Substring(fp.LastIndexOf('\\') + 1)}:{ln}:{s}");
             Trace.Flush();
         }
-
         #region Toolbox Implementation
-
         private void InitializeToolbox()
         {
             _originalFloatingHeight = pnlFunctoids.Height - 40;
@@ -136,6 +131,7 @@ namespace X12UtilsFRM
             pnlToolboxWrapper.Controls.Add(pnlHeaderBar);
 
             // 2. The Vertical Toggle Button placed directly onto the right side of the HeaderBar
+            #region vertical toggle button 
             btnToolboxVerticalToggle = new Button
             {
                 Text = "▲",
@@ -152,9 +148,9 @@ namespace X12UtilsFRM
             btnToolboxVerticalToggle.FlatAppearance.BorderSize = 0;
             btnToolboxVerticalToggle.Click += ToggleToolboxVertical_Click;
             pnlHeaderBar.Controls.Add(btnToolboxVerticalToggle);
-
-            // Handle title text and icon drawing manually via GDI+ to Skia bridging
-            pnlHeaderBar.Paint += (sender, e) =>
+            #endregion vertical toggle button
+            
+            pnlHeaderBar.Paint += (sender, e) =>  // Handle title text and icon drawing manually via GDI+ to Skia bridging
             {
                 var info = new SKImageInfo(pnlHeaderBar.Width, pnlHeaderBar.Height);
                 using (var surface = SKSurface.Create(info))
@@ -174,7 +170,7 @@ namespace X12UtilsFRM
                     using (var textPaint = new SKPaint { Color = iconColor, IsAntialias = true })
                     using (var textFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 12))
                     {
-                        canvas.DrawText("Functoids", 28, (pnlHeaderBar.Height / 2f) + 4.5f, textFont, textPaint);
+                        canvas.DrawText("Functoids & Tools", 28, (pnlHeaderBar.Height / 2f) + 4.5f, textFont, textPaint);
                     }
 
                     canvas.Flush();
@@ -185,8 +181,50 @@ namespace X12UtilsFRM
                     }
                 }
             };
+            Panel pnlCanvasToolsBottomBar = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 45,
+                BackColor = Color.FromArgb(225, 230, 245),
+                Padding = new Padding(10, 6, 10, 6),
+                BorderStyle = BorderStyle.None
+            };
+            pnlCanvasToolsBottomBar.Paint += (s, e) => {
+                using (var pen = new Pen(Color.FromArgb(190, 200, 220), 1))
+                {
+                    e.Graphics.DrawLine(pen, 0, 0, pnlCanvasToolsBottomBar.Width, 0);
+                }
+            };
+            int buttonWidth = (ToolboxWidth - 10) / 2;
+            Button btnTransform = new Button
+            {
+                Text = "Transform",
+                Size = new Size(buttonWidth, 32),
+                Location = new Point(10, 6),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(210, 220, 240),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            //btnTransform.Click += Transform_Click;
+            btnTransform.Click += btnGenerateXsltFromCanvas_Click;
+           Button btnSave = new Button
+            {
+                Text = "Save",
+                Size = new Size(buttonWidth, 32),
+                Location = new Point(15 + buttonWidth, 6),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(210, 220, 240),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+             btnSave.Click += btnSaveCanvas_Click;
 
-            // 3. Create the main categories scroll container view
+            pnlCanvasToolsBottomBar.Controls.Add(btnTransform);
+            pnlCanvasToolsBottomBar.Controls.Add(btnSave);
+            pnlToolboxWrapper.Controls.Add(pnlCanvasToolsBottomBar);
+
+            // 4. Create the main categories scroll container view (Fills remaining space)
             pnlToolboxCategoriesContainer = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -194,10 +232,17 @@ namespace X12UtilsFRM
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(10, 10, 10, 10)
+                Margin= new Padding(0,5,0,0),
+                Padding = new Padding(10, 18, 18, 10)
             };
             pnlToolboxWrapper.Controls.Add(pnlToolboxCategoriesContainer);
-            pnlToolboxCategoriesContainer.BringToFront();
+
+            // Ensure all components maintain correct Z-order layering inside the wrapper frame
+            // To prevent layout overlap during minimization, the Fill container must live at the 
+            // bottom of the Z-order stack so Top/Bottom docked components overlay cleanly on top of it.
+            pnlToolboxCategoriesContainer.SendToBack();
+            pnlCanvasToolsBottomBar.BringToFront();
+            pnlHeaderBar.BringToFront();
 
             // Tie movement drag actions onto the header bar background layer
             AttachToolboxDragEvents(pnlHeaderBar);
@@ -223,6 +268,14 @@ namespace X12UtilsFRM
             _isToolboxExpandedVertical = !_isToolboxExpandedVertical;
             pnlFunctoids.SuspendLayout();
 
+            // Extract the header and bottom bar components safely from the wrapper
+            Control pnlHeader = pnlToolboxWrapper.Controls.Cast<Control>().FirstOrDefault(c => c.Dock == DockStyle.Top);
+            Control pnlBottomBar = pnlToolboxWrapper.Controls.Cast<Control>().FirstOrDefault(c => c.Dock == DockStyle.Bottom);
+
+            int headerHeight = pnlHeader?.Height ?? 25;
+            int bottomBarHeight = pnlBottomBar?.Height ?? 45;
+            int topMarginOffset = pnlBottomBar?.Margin.Top ?? 8;
+
             if (_isToolboxExpandedVertical)
             {
                 // Restore height back out to our expanded memory size state
@@ -233,17 +286,24 @@ namespace X12UtilsFRM
             else
             {
                 // Save the current height dynamically before crushing it down (in case the user resized the form)
-                if (pnlToolboxWrapper.Height > 60)
+                // Keep threshold slightly above the dynamic collapsed height calculation
+                int minimumCollapsedHeight = headerHeight + bottomBarHeight + topMarginOffset;
+
+                if (pnlToolboxWrapper.Height > minimumCollapsedHeight + 20)
                 {
                     _originalFloatingHeight = pnlToolboxWrapper.Height;
                 }
 
-                // Collapse down vertically to perfectly clear room for lines below it
+                // Drop the central scrolling categories out of layout calculation completely
                 pnlToolboxCategoriesContainer.Visible = false;
-                pnlToolboxWrapper.Height = 52; // Height of the button strip elements combined
+
+                // Collapse down precisely matching the visible elements + the structural margin spring
+                pnlToolboxWrapper.Height = minimumCollapsedHeight;
                 btnToolboxVerticalToggle.Text = "▼";
             }
 
+            // Force the wrapper container block to evaluate layout rules and enforce spacing margins
+            pnlToolboxWrapper.PerformLayout();
             pnlFunctoids.ResumeLayout(true);
             _mapper.Invalidate();
         }
@@ -289,30 +349,23 @@ namespace X12UtilsFRM
                     pnlToolboxWrapper.BringToFront();
                 }
             };
-
             dragHandle.MouseMove += (sender, e) =>
             {
                 if (_isDraggingToolbox)
                 {
                     int deltaX = Cursor.Position.X - _toolboxDragStartMousePos.X;
                     int deltaY = Cursor.Position.Y - _toolboxDragStartMousePos.Y;
-
-                    // Compute the new target position
                     int newX = _toolboxDragStartPanelPos.X + deltaX;
                     int newY = _toolboxDragStartPanelPos.Y + deltaY;
-
-                    // Optional: Clamp the toolbox so it can't be dragged completely off screen edges
-                    if (pnlFunctoids != null)
+                    if (pnlFunctoids != null)// Optional: Clamp the toolbox so it can't be dragged completely off screen edges
                     {
                         newX = Math.Max(0, Math.Min(newX, pnlFunctoids.Width - pnlToolboxWrapper.Width));
                         newY = Math.Max(0, Math.Min(newY, pnlFunctoids.Height - 30));
                     }
-
                     pnlToolboxWrapper.Location = new Point(newX, newY);
                     _mapper.Invalidate(); // Refresh lines to redraw cleanly around it
                 }
             };
-
             dragHandle.MouseUp += (sender, e) =>
             {
                 if (e.Button == MouseButtons.Left)
@@ -324,10 +377,8 @@ namespace X12UtilsFRM
         private void RenderToolboxLayout()
         {
             if (pnlToolboxCategoriesContainer == null) return;
-
             pnlToolboxCategoriesContainer.SuspendLayout();
             pnlToolboxCategoriesContainer.Controls.Clear();
-
             foreach (var category in toolboxCategories)
             {
                 category.Width = 205;
@@ -335,17 +386,10 @@ namespace X12UtilsFRM
                 category.Margin = new Padding(6, 0, 0, 6);
                 pnlToolboxCategoriesContainer.Controls.Add(category);
             }
-
             pnlToolboxCategoriesContainer.ResumeLayout(true);
         }
-
-
-
         #endregion
-
         #region Drag and Drop Handling Logic
-
-
         private void ToggleWorkspaceDetachment()
         {
             // If the workspace isn't detached yet, pop it out into its own separate OS window
@@ -397,7 +441,6 @@ namespace X12UtilsFRM
                 ReDockWorkspaceToMainForm();
             }
         }
-
         private void ReDockWorkspaceToMainForm()
         {
             if (_detachedWorkspaceWindow != null)
@@ -431,7 +474,6 @@ namespace X12UtilsFRM
                 AttachDragEvents(child, masterControl);
             }
         }
-
         private void AttachDragEvents(Control eventTriggerControl, Control actualMovingTarget)
         {
             eventTriggerControl.MouseDown += (sender, e) =>
@@ -477,11 +519,8 @@ namespace X12UtilsFRM
                 }
             };
         }
-
         #endregion
-
         #region Embedded Schema Virtual Setup
-
         private void InitializeEmbeddedSchemaLayout(string sourceXmlPath, string targetXmlPath)
         {
             // Clear connections and bind data directly into the background Skia registries
@@ -506,7 +545,6 @@ namespace X12UtilsFRM
             InitializeToolbox();
             _mapper.Invalidate();
         }
-
         private void BuildCustomSchemaTree(XmlNode node, int depth, bool isTargetSchema)
         {
             if (node == null) return;
@@ -541,28 +579,24 @@ namespace X12UtilsFRM
                 }
             }
         }
-
         #endregion
-
         #region Form Controls & Life Cycle
-
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+    
             RichTextBoxTarget.ReInitializeAllTextboxes(this);
             Logger.Info("RichTextBox target initialized successfully.");
         }
-
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
             RichTextBoxTarget.ReInitializeAllTextboxes(this);
             Logger.Info("RichTextBox logging attached (UI-safe).");
         }
-
         private void Form1_Load(object sender, EventArgs e)
         {
-            rbXml.Checked = Properties.Settings.Default.TransformFormat == "XML";
+         
             tt = new ToolTip();
             tt.SetToolTip(btnAddFiles, $"Import X12 Inbound files from {Properties.Settings.Default.X12Folder}");
 
@@ -573,21 +607,18 @@ namespace X12UtilsFRM
             lbxInfileList.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
             lbxTargetSchema.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
 
-            lbxInfileList.SelectedIndex = 5;
-            lbxTargetSchema.SelectedIndex = 5;
+            lbxInfileList.SelectedIndex = Properties.Settings.Default.SelectedInfile;
+            lbxTargetSchema.SelectedIndex = Properties.Settings.Default.SelectedTargetSchema;
+            //lbxTargetSchema.SelectedIndex = 5;
 
             btnParse.Enabled = false;
         }
-
         private void X12UtilsFRM_FormClosing(object sender, FormClosingEventArgs e)
         {
             Properties.Settings.Default.Save();
         }
-
         #endregion
-
         #region File Processing Actions
-
         private void btnMap_Click(object sender, EventArgs e)
         {
             string inputFileName = lbxInfileList.Text;
@@ -612,10 +643,9 @@ namespace X12UtilsFRM
         {
             Logger.Info($"IC#={args.InterchangeControlNumber}-FG={args.FunctionalGroupControlNumber}-Segment={args.Segment}{args.Message}");
         }
-
         private string checkedOption(GroupBox grp)
         {
-            var checkedControl = grp.Controls.Cast<Control>().FirstOrDefault(c =>((dynamic) c).Checked == true);
+            var checkedControl = grp.Controls.Cast<Control>().FirstOrDefault(c => ((dynamic)c).Checked == true);
             Logger.Info($"Found control type: {checkedControl.Name}");
             return checkedControl.Text;
         }
@@ -628,7 +658,8 @@ namespace X12UtilsFRM
             {
                 switch (_checkedOption)
                 {
-                    case "HTML": x = X12Tohtml(rtxInterchangeFile.Text); break;
+                    //case "HTML": x = X12Tohtml(rtxInterchangeFile.Text); break;
+                    case "HTML": rtxInterchangeFile.Text = ContentFromFile(lbxInfileList.Text); x = X12Tohtml(rtxInterchangeFile.Text); break;
                     case "XML":
                         rtxInterchangeFile.Text = ContentFromFile(lbxInfileList.Text);
                         X12.Parsing.X12Parser parser = new X12.Parsing.X12Parser(new x12Test.specFinder(), true);
@@ -646,13 +677,11 @@ namespace X12UtilsFRM
             DisplayHtml(x);
             tabControl1.SelectedIndex = (int)enmTabPages.browser;
         }
-
         public string X12Tohtml(string x12)
         {
             var htmlService = new X12HtmlTransformationService(new X12EdiParsingService(Properties.Settings.Default.SurppressParsingComments, new x12Test.specFinder()));
             return htmlService.Transform(x12);
         }
-
         public string X12ToXml(string x12)
         {
             if (string.IsNullOrEmpty(x12)) return string.Empty;
@@ -665,7 +694,6 @@ namespace X12UtilsFRM
                 return sr.ReadToEnd();
             }
         }
-
         private void DisplayHtml(string html)
         {
             webBrowser1.Navigate("about:blank");
@@ -680,7 +708,6 @@ namespace X12UtilsFRM
             webBrowser1.DocumentText = html;
             webBrowser1.AllowNavigation = true;
         }
-
         private void btnAddFiles_Click(object sender, EventArgs e)
         {
             lbxInfileList.Items.Clear();
@@ -714,10 +741,7 @@ namespace X12UtilsFRM
                 MessageBox.Show($"Spec Not Found for 856");
             }
         }
-
-
         #endregion
-
         #region Functional Canvas Drag-Drop Core Engine
         private Control ResolveActualTargetNode(Control control, Point clientPt)
         {
@@ -746,7 +770,6 @@ namespace X12UtilsFRM
 
             return control;
         }
-
         private void pnlFunctoids_DragDrop(object sender, DragEventArgs e)
         {
             // 1. Calculate drop coordinates relative to the central pnlFunctoids working area
@@ -888,20 +911,27 @@ namespace X12UtilsFRM
 
             return functoidNode;
         }
-
         #endregion
-
         #region Code Compilation Utilities (Xslt Outbound Maps)
-
-
-
-
-
         #endregion
 
-        // Cleaned up legacy residual functions (trvSource overrides, Hippo wrappers, etc.)
-        private void rbXml_CheckedChanged(object sender, EventArgs e) { }
-        private void lbxInputFileList(object sender, EventArgs e) { }
+        private void btnSaveCanvas_Click(object sender, EventArgs e)
+        {
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
+                sfd.Title = "Save Canvas Workflow State";
+
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    var generator = new XsltMapGenerator(_mapper);
+
+                    // Saves the visual structural nodes out as JSON mapping rules
+                    generator.SaveCanvasLayout(sfd.FileName, lbxInfileList.Text, "TargetSchema.xsd");
+                    MessageBox.Show("Canvas layout snapshot preserved successfully!", "State Saved");
+                }
+            }
+        }
         private void btnHippaParse_Click(object sender, EventArgs e) { }
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -919,11 +949,11 @@ namespace X12UtilsFRM
                     Log("Switched to Browser tab.");
                     // e.g., Ensure a document is loaded or focus the webBrowser1 control
                     lblSaveAs.Text = lbxInfileList.Text;
-                    using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-                    {
-                        saveFileDialog.InitialDirectory = Path.GetDirectoryName(lbxInfileList.Text);
-                        webBrowser1.ShowSaveAsDialog();
-                    }
+                    //using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+                    //{
+                    //    saveFileDialog.InitialDirectory = Path.GetDirectoryName(lbxInfileList.Text);
+                    //    webBrowser1.ShowSaveAsDialog();
+                    //}
                     webBrowser1.Focus();
                     break;
 
@@ -938,14 +968,7 @@ namespace X12UtilsFRM
             int fcount = int.Parse(((Label)sender).Text);
             btnParse.Enabled = fcount == 1 ? true : false;
         }
-        private void rbHtml_CheckedChanged(object sender, EventArgs e)
-        {
-            RadioButton r = (RadioButton)sender;
-            Properties.Settings.Default.TransformFormat = r.Checked ? r.Text : Properties.Settings.Default.TransformFormat;
-            Log($"TransformFormat:{Properties.Settings.Default.TransformFormat}");
-            Properties.Settings.Default.Save();
-        }
-
+        
         public void LinkXsltToSourceXmlFile(string sourceXmlPath, string xsltFilePath)
         {
             if (string.IsNullOrEmpty(sourceXmlPath) || !File.Exists(sourceXmlPath))
@@ -1031,34 +1054,28 @@ namespace X12UtilsFRM
         }
         private void lbxfileList_SelectedIndexChanged(object sender, EventArgs e)
         {
+            string  name = ((ListBox)sender).Name;
+            switch (name)
+            {
+                case "lbxInfileList":
+                    Properties.Settings.Default.SelectedInfile = ((ListBox)sender).SelectedIndex;
+                    break;
+                case "lbxTargetSchema":
+                    Properties.Settings.Default.SelectedTargetSchema = ((ListBox)sender).SelectedIndex;
+                    break;
+            }
             string fileName = ((ListBox)sender).Text;
             if (String.IsNullOrEmpty(fileName)) return;
             tt.SetToolTip(lbxInfileList, fileName + " is Selected now..");
             lblInterchangeCount.Text = "0";
             lblInterchangeCount.Text = "1";
-
-
-            if (chkBrowse.Checked)
-            {
-                switch (Path.GetExtension(fileName))
-                {
-                    case ".txt":
-                        DisplayHtml(X12ToXml(ContentFromFile(fileName)));
-                        break;
-                    case ".xml":
-                        DisplayHtml(ContentFromFile(fileName));
-                        tabControl1.SelectedIndex = (int)enmTabPages.browser;
-                        break;
-                    default:
-                        break;
-                }
-                return;
-            }
+            Properties.Settings.Default.Save(); 
         }
-
         private void label4_Click(object sender, EventArgs e)
         {
 
         }
+
+        
     }
 }
