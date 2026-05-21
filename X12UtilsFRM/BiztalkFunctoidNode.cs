@@ -6,6 +6,7 @@ namespace X12UtilsFRM
 {
     public class BizTalkFunctoidNode : Panel
     {
+        public Guid Id { get; private set; } = Guid.NewGuid();
         public string CustomScript { get; set; }
         public string FunctoidName { get; private set; }
         public string FunctoidCategory { get; private set; }

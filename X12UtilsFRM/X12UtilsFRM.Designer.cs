@@ -58,13 +58,11 @@ namespace X12UtilsFRM {
             this.tbpMap = new System.Windows.Forms.TabPage();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.pnlFunctoids = new System.Windows.Forms.Panel();
-            this.btnGenerateXsltFromCanvas = new System.Windows.Forms.Button();
             this.trvTarget = new System.Windows.Forms.TreeView();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.rbHtml = new System.Windows.Forms.RadioButton();
             this.rbXml = new System.Windows.Forms.RadioButton();
-            this.button2 = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.parse.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -77,7 +75,6 @@ namespace X12UtilsFRM {
             this.FormLocations.SuspendLayout();
             this.tbpMap.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
-            this.pnlFunctoids.SuspendLayout();
             this.SuspendLayout();
             // 
             // statusStrip1
@@ -447,8 +444,6 @@ namespace X12UtilsFRM {
             // 
             // pnlFunctoids
             // 
-            this.pnlFunctoids.Controls.Add(this.button2);
-            this.pnlFunctoids.Controls.Add(this.btnGenerateXsltFromCanvas);
             this.pnlFunctoids.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlFunctoids.Location = new System.Drawing.Point(3, 3);
             this.pnlFunctoids.Name = "pnlFunctoids";
@@ -456,16 +451,6 @@ namespace X12UtilsFRM {
             this.pnlFunctoids.TabIndex = 0;
             this.pnlFunctoids.DragDrop += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragDrop);
             this.pnlFunctoids.DragEnter += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragEnter);
-            // 
-            // btnGenerateXsltFromCanvas
-            // 
-            this.btnGenerateXsltFromCanvas.Location = new System.Drawing.Point(106, 630);
-            this.btnGenerateXsltFromCanvas.Name = "btnGenerateXsltFromCanvas";
-            this.btnGenerateXsltFromCanvas.Size = new System.Drawing.Size(97, 29);
-            this.btnGenerateXsltFromCanvas.TabIndex = 1;
-            this.btnGenerateXsltFromCanvas.Text = "Transform";
-            this.btnGenerateXsltFromCanvas.UseVisualStyleBackColor = true;
-            this.btnGenerateXsltFromCanvas.Click += new System.EventHandler(this.btnGenerateXsltFromCanvas_Click);
             // 
             // trvTarget
             // 
@@ -506,15 +491,6 @@ namespace X12UtilsFRM {
             this.rbXml.Text = "XML";
             this.rbXml.UseVisualStyleBackColor = true;
             // 
-            // button2
-            // 
-            this.button2.Location = new System.Drawing.Point(3, 630);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(97, 29);
-            this.button2.TabIndex = 2;
-            this.button2.Text = "Transform";
-            this.button2.UseVisualStyleBackColor = true;
-            // 
             // X12UtilsFRM
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -542,7 +518,6 @@ namespace X12UtilsFRM {
             this.FormLocations.ResumeLayout(false);
             this.tbpMap.ResumeLayout(false);
             this.tableLayoutPanel1.ResumeLayout(false);
-            this.pnlFunctoids.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -581,12 +556,10 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.Panel pnlFunctoids;
         private System.Windows.Forms.ListBox lbxTargetSchema;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
-        private System.Windows.Forms.Button btnGenerateXsltFromCanvas;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label lblSaveAs;
-        private System.Windows.Forms.Button button2;
     }
 }
 
