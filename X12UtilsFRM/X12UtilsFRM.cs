@@ -21,6 +21,7 @@ using X12.Hipaa.Claims.Services;
 using X12.Parsing;
 using X12.Shared.Models;
 using X12.Transformations;
+using static System.Environment;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 using GroupBox = System.Windows.Forms.GroupBox;
 using Label = System.Windows.Forms.Label;
@@ -96,8 +97,13 @@ namespace X12UtilsFRM
             _mapper.DragDrop += pnlFunctoids_DragDrop;
 
 
-
-
+            ContextMenuStrip lbxMenu = new ContextMenuStrip();
+            ToolStripMenuItem browseItem = new ToolStripMenuItem("Browse", null, ContextMenu_Browse_Click);
+            ToolStripMenuItem DeleteItem = new ToolStripMenuItem("Delete", null, ContextMenu_Delete_Click);
+            lbxMenu.Items.Add(browseItem);
+            lbxMenu.Items.Add(DeleteItem);
+            lbxInfileList.ContextMenuStrip = lbxMenu;
+            lbxTargetSchema.ContextMenuStrip = lbxMenu;
 
         }
         private static void Log(String s, [CallerMemberName] string cn = "", [CallerLineNumber] int ln = 0, [CallerFilePath] string fp = "")
@@ -105,6 +111,250 @@ namespace X12UtilsFRM
             Trace.WriteLine($"{DateTime.Now.ToString()}-{cn}@{fp.Substring(fp.LastIndexOf('\\') + 1)}:{ln}:{s}");
             Trace.Flush();
         }
+
+        #region context menu handlers
+        private void ContextMenu_Browse_Click(object sender, EventArgs eventArgs)
+        {
+
+            ToolStripMenuItem clickedItem = (ToolStripMenuItem)sender;
+            ContextMenuStrip ownerMenu = (ContextMenuStrip)clickedItem.Owner;
+            ListBox parentControl = ownerMenu.SourceControl as ListBox;
+            string htmlContent = $@"<html><head><meta http-equiv=""X-UA-Compatible"" content=""IE=edge"" /></head><body><xmp>{ContentFromFile(parentControl.Text)}</xmp></body></html>";
+            DisplayHtml(htmlContent);
+            tabControl1.SelectedIndex = (int)enmTabPages.browser;
+        }
+        private void ContextMenu_Delete_Click(object sender, EventArgs eventArgs)
+        {
+            ToolStripMenuItem clickedItem = (ToolStripMenuItem)sender;
+            ContextMenuStrip ownerMenu = (ContextMenuStrip)clickedItem.Owner;
+            ListBox parentControl = ownerMenu.SourceControl as ListBox;
+            if (File.Exists(parentControl.Text))
+            {
+                try
+                {
+                    File.Delete(parentControl.Text);
+                    parentControl.Items.Remove(parentControl.Text);
+                 
+                    MessageBox.Show("File deleted successfully.");
+                    btnAddFiles_Click(null,null);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to delete file: {ex.Message}");
+                }
+            }
+            else
+            {
+                MessageBox.Show("File does not exist.");
+            }
+        }
+        #endregion context menu handlers
+        #region Buttons
+        private void btnAddFiles_Click(object sender, EventArgs e)
+        {
+            lbxInfileList.Items.Clear();
+            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
+            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml"));
+            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xslt"));
+            string[] ss = new string[lbxInfileList.Items.Count];
+            lbxInfileList.Items.CopyTo(ss, 0);
+            Properties.Settings.Default.fileList = string.Join(",", ss);
+            Properties.Settings.Default.Save();
+        }
+        private void btnFolderBrowse_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog1.SelectedPath = Properties.Settings.Default.X12Folder != string.Empty ? Properties.Settings.Default.X12Folder : Environment.SpecialFolder.Desktop.ToString();
+            folderBrowserDialog1.ShowDialog();
+            Properties.Settings.Default.X12Folder = folderBrowserDialog1.SelectedPath;
+            Properties.Settings.Default.Save();
+        }
+        private void btnSaveCanvas_Click(object sender, EventArgs e)
+        {
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
+                sfd.Title = "Save Canvas Workflow State";
+
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    var generator = new XsltMapGenerator(_mapper);
+
+                    // Saves the visual structural nodes out as JSON mapping rules
+                    generator.SaveCanvasLayout(sfd.FileName, lbxInfileList.Text, "TargetSchema.xsd");
+                    MessageBox.Show("Canvas layout snapshot preserved successfully!", "State Saved");
+                }
+            }
+        }
+        private void btnGenerateXsltFromCanvas_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(lbxInfileList.Text))
+            {
+                MessageBox.Show("Please select a source file from the list first.", "Missing Source Context");
+                return;
+            }
+            try
+            {
+                var generator = new XsltMapGenerator(_mapper);
+                string directory = Path.GetDirectoryName(lbxInfileList.Text);
+                string filenameWithoutExt = Path.GetFileNameWithoutExtension(lbxInfileList.Text);
+                string targetSchemaFileName = Path.Combine(directory, "Transforms", filenameWithoutExt + ".xslt");
+                string transformDirectory = Path.GetDirectoryName(targetSchemaFileName);
+                if (!Directory.Exists(transformDirectory))
+                {
+                    Directory.CreateDirectory(transformDirectory);
+                }
+                string compiledXslt = generator.GenerateXsltFromCanvas(lbxInfileList.Text, targetSchemaFileName);
+                File.WriteAllText(targetSchemaFileName, compiledXslt);
+                LinkXsltToSourceXmlFile(lbxInfileList.Text, targetSchemaFileName);
+
+                MessageBox.Show($"XSLT Map generated successfully at:\n{targetSchemaFileName}", "Success");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to generate XSLT map layout:\n{ex.Message}", "Generation Error");
+            }
+        }
+        private void btnHippaParse_Click(object sender, EventArgs e) { }
+        private void btnLoadCanvas_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
+
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    string jsonRaw = File.ReadAllText(ofd.FileName);
+                    var savedState = System.Text.Json.JsonSerializer.Deserialize<CanvasSaveState>(jsonRaw);
+
+                    // 1. Clear active connections and existing manual functoids from canvas
+                    _mapper.Connections.Clear();
+
+                    // Clean up old visual functoid controls if your mapper holds a separate list
+                    // _mapper.Functoids?.Clear(); 
+
+                    // Track newly generated functoids mapped from their JSON layout coordinate string "X_Y"
+                    var runtimeFunctoidRegistry = new Dictionary<string, dynamic>();
+
+                    // 2. Rehydrate and spawn Functoid nodes onto the canvas interface
+                    foreach (var f in savedState.Functoids)
+                    {
+                        Control newFunctoidControl = CreateFunctoid(f.FunctoidName, new System.Drawing.Point((int)f.X, (int)f.Y));
+
+                        // Inject custom function properties back into your dynamic object variable instance
+                        dynamic dynamicNode = newFunctoidControl;
+                        dynamicNode.CustomScript = f.CustomScript;
+
+                        pnlFunctoids.Controls.Add(newFunctoidControl);
+                        newFunctoidControl.BringToFront();
+
+                        runtimeFunctoidRegistry[f.Id] = newFunctoidControl;
+                    }
+
+                    // 3. Reconnect Wires
+                    foreach (var wire in savedState.Wires)
+                    {
+                        dynamic sourcePointer = null;
+                        dynamic targetPointer = null;
+
+                        // Resolve Source Pointer
+                        if (wire.SourceType == "SchemaNode")
+                        {
+                            // Find matching node inside left schema tree via XPath helper
+                            sourcePointer = FindNodeByXPath(_mapper.FlatSchemaRegistry, wire.SourceIdOrXPath);
+                        }
+                        else if (wire.SourceType == "Functoid")
+                        {
+                            runtimeFunctoidRegistry.TryGetValue(wire.SourceIdOrXPath, out sourcePointer);
+                        }
+
+                        // Resolve Target Pointer
+                        if (wire.TargetType == "SchemaNode")
+                        {
+                            // Find matching node inside right schema tree via XPath helper
+                            targetPointer = FindNodeByXPath(_mapper.FlatTargetSchemaRegistry, wire.TargetIdOrXPath);
+                        }
+                        else if (wire.TargetType == "Functoid")
+                        {
+                            runtimeFunctoidRegistry.TryGetValue(wire.TargetIdOrXPath, out targetPointer);
+                        }
+
+                        // 4. Append wire connection link if both ends were successfully resolved
+                        if (sourcePointer != null && targetPointer != null)
+                        {
+                            // Create connection structure match matching your canvas model definition
+                            // ❌ ERROR LINE
+                            //  _mapper.Connections.Add(new ConnectionItem(sourcePointer, targetPointer));
+                            _mapper.Connections.Add(new MappingConnection { Source = sourcePointer, Target = targetPointer });
+                        }
+                    }
+
+                    // If your _mapper object handles the canvas lifecycle UI itself:
+                    _mapper.Invalidate();
+                    // 5. Explicitly force the Skia Graphics Canvas control to refresh and repaint the connections
+                    // skiaControl.Invalidate(); 
+
+                    MessageBox.Show("Canvas wire layouts successfully loaded and re-drawn!", "State Restored");
+                }
+            }
+        }
+        private void btnMap_Click(object sender, EventArgs e)
+        {
+            string inputFileName = lbxInfileList.Text;
+            string outputFileName = lbxTargetSchema.Text;
+
+            if (string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName))
+            {
+                MessageBox.Show("Please select both source and target XML files for mapping.");
+                return;
+            }
+
+            if (Path.GetExtension(inputFileName) != ".xml")
+            {
+                MessageBox.Show("File extension must be an XML");
+                return;
+            }
+
+            tabControl1.SelectedIndex = (int)enmTabPages.map;
+            InitializeEmbeddedSchemaLayout(inputFileName, outputFileName);
+        }
+        private void btnParse_Click(object sender, EventArgs e)
+        {
+            string x = "";
+            string _checkedOption = checkedOption(groupBox1);
+
+            try
+            {
+                switch (_checkedOption)
+                {
+                    //case "HTML": x = X12Tohtml(rtxInterchangeFile.Text); break;
+                    case "HTML": rtxInterchangeFile.Text = ContentFromFile(lbxInfileList.Text); x = X12Tohtml(rtxInterchangeFile.Text); break;
+                    case "XML":
+                        rtxInterchangeFile.Text = ContentFromFile(lbxInfileList.Text);
+                        X12.Parsing.X12Parser parser = new X12.Parsing.X12Parser(new x12Test.specFinder(), true);
+                        parser.ParserWarning += new X12.Parsing.X12Parser.X12ParserWarningEventHandler(parser_ParserWarning);
+                        interchanges = parser.ParseMultiple(rtxInterchangeFile.Text);
+                        x = X12ToXml(rtxInterchangeFile.Text);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return;
+            }
+            DisplayHtml(x);
+            tabControl1.SelectedIndex = (int)enmTabPages.browser;
+        }
+        private void btnTransform_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(lbxInfileList.Text))
+            {
+                MessageBox.Show("Please select Input xml");
+                return;
+            }
+            XsltTransformer.ApplyXslt(lbxInfileList.Text, lbxTargetSchema.Text, Path.Combine(Path.GetDirectoryName(lbxInfileList.Text), Path.GetFileNameWithoutExtension(lbxInfileList.Text) + "_Transformed.xml"));
+        }
+        #endregion Buttons
         #region Toolbox Implementation
         private void InitializeToolbox()
         {
@@ -597,65 +847,10 @@ namespace X12UtilsFRM
             }
         }
         #endregion
-        #region Form Controls & Life Cycle
-        protected override void OnLoad(EventArgs e)
-        {
-            base.OnLoad(e);
+       
 
-            RichTextBoxTarget.ReInitializeAllTextboxes(this);
-            Logger.Info("RichTextBox target initialized successfully.");
-        }
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            RichTextBoxTarget.ReInitializeAllTextboxes(this);
-            Logger.Info("RichTextBox logging attached (UI-safe).");
-        }
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-            tt = new ToolTip();
-            tt.SetToolTip(btnAddFiles, $"Import X12 Inbound files from {Properties.Settings.Default.X12Folder}");
-
-            if (string.IsNullOrEmpty(Properties.Settings.Default.fileList))
-            {
-                btnAddFiles_Click(null, null);
-            }
-            lbxInfileList.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
-            lbxTargetSchema.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
-
-            lbxInfileList.SelectedIndex = Properties.Settings.Default.SelectedInfile;
-            lbxTargetSchema.SelectedIndex = Properties.Settings.Default.SelectedTargetSchema;
-            //lbxTargetSchema.SelectedIndex = 5;
-
-            btnParse.Enabled = false;
-        }
-        private void X12UtilsFRM_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            Properties.Settings.Default.Save();
-        }
-        #endregion
         #region File Processing Actions
-        private void btnMap_Click(object sender, EventArgs e)
-        {
-            string inputFileName = lbxInfileList.Text;
-            string outputFileName = lbxTargetSchema.Text;
 
-            if (string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName))
-            {
-                MessageBox.Show("Please select both source and target XML files for mapping.");
-                return;
-            }
-
-            if (Path.GetExtension(inputFileName) != ".xml")
-            {
-                MessageBox.Show("File extension must be an XML");
-                return;
-            }
-
-            tabControl1.SelectedIndex = (int)enmTabPages.map;
-            InitializeEmbeddedSchemaLayout(inputFileName, outputFileName);
-        }
         private void parser_ParserWarning(object sender, X12ParserWarningEventArgs args)
         {
             Logger.Info($"IC#={args.InterchangeControlNumber}-FG={args.FunctionalGroupControlNumber}-Segment={args.Segment}{args.Message}");
@@ -666,34 +861,7 @@ namespace X12UtilsFRM
             Logger.Info($"Found control type: {checkedControl.Name}");
             return checkedControl.Text;
         }
-        private void btnParse_Click(object sender, EventArgs e)
-        {
-            string x = "";
-            string _checkedOption = checkedOption(groupBox1);
 
-            try
-            {
-                switch (_checkedOption)
-                {
-                    //case "HTML": x = X12Tohtml(rtxInterchangeFile.Text); break;
-                    case "HTML": rtxInterchangeFile.Text = ContentFromFile(lbxInfileList.Text); x = X12Tohtml(rtxInterchangeFile.Text); break;
-                    case "XML":
-                        rtxInterchangeFile.Text = ContentFromFile(lbxInfileList.Text);
-                        X12.Parsing.X12Parser parser = new X12.Parsing.X12Parser(new x12Test.specFinder(), true);
-                        parser.ParserWarning += new X12.Parsing.X12Parser.X12ParserWarningEventHandler(parser_ParserWarning);
-                        interchanges = parser.ParseMultiple(rtxInterchangeFile.Text);
-                        x = X12ToXml(rtxInterchangeFile.Text);
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-                return;
-            }
-            DisplayHtml(x);
-            tabControl1.SelectedIndex = (int)enmTabPages.browser;
-        }
         public string X12Tohtml(string x12)
         {
             var htmlService = new X12HtmlTransformationService(new X12EdiParsingService(Properties.Settings.Default.SurppressParsingComments, new x12Test.specFinder()));
@@ -725,16 +893,7 @@ namespace X12UtilsFRM
             webBrowser1.DocumentText = html;
             webBrowser1.AllowNavigation = true;
         }
-        private void btnAddFiles_Click(object sender, EventArgs e)
-        {
-            lbxInfileList.Items.Clear();
-            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
-            lbxInfileList.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml"));
-            string[] ss = new string[lbxInfileList.Items.Count];
-            lbxInfileList.Items.CopyTo(ss, 0);
-            Properties.Settings.Default.fileList = string.Join(",", ss);
-            Properties.Settings.Default.Save();
-        }
+        
         private void btnFindSpec_Click(object sender, EventArgs e)
         {
             var finder = new x12Test.specFinder();
@@ -759,6 +918,68 @@ namespace X12UtilsFRM
             }
         }
         #endregion
+        #region Form Controls & Life Cycle
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            RichTextBoxTarget.ReInitializeAllTextboxes(this);
+            Logger.Info("RichTextBox target initialized successfully.");
+        }
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            RichTextBoxTarget.ReInitializeAllTextboxes(this);
+            Logger.Info("RichTextBox logging attached (UI-safe).");
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+            tt = new ToolTip();
+            tt.SetToolTip(btnAddFiles, $"Import X12 Inbound files from {Properties.Settings.Default.X12Folder}");
+
+            if (string.IsNullOrEmpty(Properties.Settings.Default.fileList))
+            {
+                btnAddFiles_Click(null, null);
+            }
+            lbxInfileList.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
+            lbxTargetSchema.Items.AddRange(Properties.Settings.Default.fileList.Split(','));
+
+            lbxInfileList.SelectedIndex = Properties.Settings.Default.SelectedInfile;
+            //lbxTargetSchema.SelectedIndex = Properties.Settings.Default.SelectedTargetSchema;
+            //lbxTargetSchema.SelectedIndex = 5;
+
+            btnParse.Enabled = false;
+        }
+        private void X12UtilsFRM_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Properties.Settings.Default.Save();
+        }
+        #endregion
+        #region listboxes
+        private void lbxfileList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ListBox lbx = (ListBox)sender;
+            string name = lbx.Name;
+            
+            switch (name)
+            {
+                case "lbxInfileList":
+                    Properties.Settings.Default.SelectedInfile = ((ListBox)sender).SelectedIndex;
+                    break;
+                case "lbxTargetSchema":
+                    Properties.Settings.Default.SelectedTargetSchema = ((ListBox)sender).SelectedIndex;
+                    btnTransform.Enabled = Path.GetExtension(lbxTargetSchema.Text).ToLower() == ".xslt" ? true : false;                    
+                        break;
+            }
+            string fileName = ((ListBox)sender).Text;
+            if (String.IsNullOrEmpty(fileName)) return;
+            tt.SetToolTip(lbxInfileList, fileName + " is Selected now..");
+            lblInterchangeCount.Text = "0";
+            lblInterchangeCount.Text = "1";
+            Properties.Settings.Default.Save();
+        }
+        #endregion listboxes
         #region Functional Canvas Drag-Drop Core Engine
         private Control ResolveActualTargetNode(Control control, Point clientPt)
         {
@@ -932,104 +1153,6 @@ namespace X12UtilsFRM
         #region Code Compilation Utilities (Xslt Outbound Maps)
         #endregion
 
-        private void btnSaveCanvas_Click(object sender, EventArgs e)
-        {
-            using (SaveFileDialog sfd = new SaveFileDialog())
-            {
-                sfd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
-                sfd.Title = "Save Canvas Workflow State";
-
-                if (sfd.ShowDialog() == DialogResult.OK)
-                {
-                    var generator = new XsltMapGenerator(_mapper);
-
-                    // Saves the visual structural nodes out as JSON mapping rules
-                    generator.SaveCanvasLayout(sfd.FileName, lbxInfileList.Text, "TargetSchema.xsd");
-                    MessageBox.Show("Canvas layout snapshot preserved successfully!", "State Saved");
-                }
-            }
-        }
-
-        private void btnLoadCanvas_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog ofd = new OpenFileDialog())
-            {
-                ofd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
-
-                if (ofd.ShowDialog() == DialogResult.OK)
-                {
-                    string jsonRaw = File.ReadAllText(ofd.FileName);
-                    var savedState = System.Text.Json.JsonSerializer.Deserialize<CanvasSaveState>(jsonRaw);
-
-                    // 1. Clear active connections and existing manual functoids from canvas
-                    _mapper.Connections.Clear();
-
-                    // Clean up old visual functoid controls if your mapper holds a separate list
-                    // _mapper.Functoids?.Clear(); 
-
-                    // Track newly generated functoids mapped from their JSON layout coordinate string "X_Y"
-                    var runtimeFunctoidRegistry = new Dictionary<string, dynamic>();
-
-                    // 2. Rehydrate and spawn Functoid nodes onto the canvas interface
-                    foreach (var f in savedState.Functoids)
-                    {
-                        Control newFunctoid =CreateFunctoid(f.FunctoidName, new System.Drawing.Point((int)f.X, (int)f.Y));
-
-                        //  CRITICAL FIX: Mount the control physically onto the WinForms Canvas Surface Container!
-                        pnlFunctoids.Controls.Add(newFunctoid);
-                        newFunctoid.BringToFront();
-
-                        // Map the original file ID token to this live runtime instance pointer
-                        runtimeFunctoidRegistry[f.Id] = newFunctoid;
-                    }
-
-                    // 3. Reconnect Wires
-                    foreach (var wire in savedState.Wires)
-                    {
-                        dynamic sourcePointer = null;
-                        dynamic targetPointer = null;
-
-                        // Resolve Source Pointer
-                        if (wire.SourceType == "SchemaNode")
-                        {
-                            // Find matching node inside left schema tree via XPath helper
-                            sourcePointer = FindNodeByXPath(_mapper.FlatSchemaRegistry, wire.SourceIdOrXPath);
-                        }
-                        else if (wire.SourceType == "Functoid")
-                        {
-                            runtimeFunctoidRegistry.TryGetValue(wire.SourceIdOrXPath, out sourcePointer);
-                        }
-
-                        // Resolve Target Pointer
-                        if (wire.TargetType == "SchemaNode")
-                        {
-                            // Find matching node inside right schema tree via XPath helper
-                            targetPointer = FindNodeByXPath(_mapper.FlatTargetSchemaRegistry, wire.TargetIdOrXPath);
-                        }
-                        else if (wire.TargetType == "Functoid")
-                        {
-                            runtimeFunctoidRegistry.TryGetValue(wire.TargetIdOrXPath, out targetPointer);
-                        }
-
-                        // 4. Append wire connection link if both ends were successfully resolved
-                        if (sourcePointer != null && targetPointer != null)
-                        {
-                            // Create connection structure match matching your canvas model definition
-                            // ❌ ERROR LINE
-                            //  _mapper.Connections.Add(new ConnectionItem(sourcePointer, targetPointer));
-                            _mapper.Connections.Add(new MappingConnection { Source = sourcePointer, Target = targetPointer });
-                        }
-                    }
-                    
-                    // If your _mapper object handles the canvas lifecycle UI itself:
-                    _mapper.Invalidate();
-                    // 5. Explicitly force the Skia Graphics Canvas control to refresh and repaint the connections
-                    // skiaControl.Invalidate(); 
-
-                    MessageBox.Show("Canvas wire layouts successfully loaded and re-drawn!", "State Restored");
-                }
-            }
-        }
 
         /// <summary>
         /// Helper to crawl the schema registries and locate the concrete matching node instance by its flat path string.
@@ -1052,7 +1175,7 @@ namespace X12UtilsFRM
             }
             return null;
         }
-        private void btnHippaParse_Click(object sender, EventArgs e) { }
+
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
             enmTabPages currentTab = (enmTabPages)tabControl1.SelectedIndex;
@@ -1136,35 +1259,7 @@ namespace X12UtilsFRM
                 doc.Save(writer);
             }
         }
-        private void btnGenerateXsltFromCanvas_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(lbxInfileList.Text))
-            {
-                MessageBox.Show("Please select a source file from the list first.", "Missing Source Context");
-                return;
-            }
-            try
-            {
-                var generator = new XsltMapGenerator(_mapper);
-                string directory = Path.GetDirectoryName(lbxInfileList.Text);
-                string filenameWithoutExt = Path.GetFileNameWithoutExtension(lbxInfileList.Text);
-                string targetSchemaFileName = Path.Combine(directory, "Transforms", filenameWithoutExt + ".xslt");
-                string transformDirectory = Path.GetDirectoryName(targetSchemaFileName);
-                if (!Directory.Exists(transformDirectory))
-                {
-                    Directory.CreateDirectory(transformDirectory);
-                }
-                string compiledXslt = generator.GenerateXsltFromCanvas(lbxInfileList.Text, targetSchemaFileName);
-                File.WriteAllText(targetSchemaFileName, compiledXslt);
-                LinkXsltToSourceXmlFile(lbxInfileList.Text, targetSchemaFileName);
 
-                MessageBox.Show($"XSLT Map generated successfully at:\n{targetSchemaFileName}", "Success");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to generate XSLT map layout:\n{ex.Message}", "Generation Error");
-            }
-        }
         public string ContentFromFile(string filename/*fullPath*/)
         {
             using (Stream ediFile = new FileStream(filename, FileMode.Open, FileAccess.Read))
@@ -1172,30 +1267,7 @@ namespace X12UtilsFRM
                 return new StreamReader(filename).ReadToEnd();
             }
         }
-        private void lbxfileList_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            string name = ((ListBox)sender).Name;
-            switch (name)
-            {
-                case "lbxInfileList":
-                    Properties.Settings.Default.SelectedInfile = ((ListBox)sender).SelectedIndex;
-                    break;
-                case "lbxTargetSchema":
-                    Properties.Settings.Default.SelectedTargetSchema = ((ListBox)sender).SelectedIndex;
-                    break;
-            }
-            string fileName = ((ListBox)sender).Text;
-            if (String.IsNullOrEmpty(fileName)) return;
-            tt.SetToolTip(lbxInfileList, fileName + " is Selected now..");
-            lblInterchangeCount.Text = "0";
-            lblInterchangeCount.Text = "1";
-            Properties.Settings.Default.Save();
-        }
-        private void label4_Click(object sender, EventArgs e)
-        {
 
-        }
-
-
+       
     }
 }

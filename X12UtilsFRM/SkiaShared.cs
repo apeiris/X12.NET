@@ -20,6 +20,7 @@ namespace X12UtilsFRM
         public string FunctoidName { get; set; }
         public float X { get; set; }
         public float Y { get; set; }
+        public string CustomScript { get; set; }
     }
 
     public class CanvasConnectionDto

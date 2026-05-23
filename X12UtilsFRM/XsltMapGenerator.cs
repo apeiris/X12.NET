@@ -91,6 +91,30 @@ namespace PdfX.App.Services
                 {
                     string varName = $"var:v{variableCounter}";
 
+                    // --- INTEGRATION POINT: Check if the functoid has a custom script ---
+                    // Using dynamic binding block handles safe reflection check
+                    var sourceFunctoid = conn.Source;
+                    string functoidKey = sourceFunctoid.FunctoidName;
+
+                    try
+                    {
+                        // Check if CustomScript contains a block. If it matches, we register it!
+                        if (sourceFunctoid.CustomScript != null && !string.IsNullOrWhiteSpace((string)sourceFunctoid.CustomScript))
+                        {
+                            string scriptBody = (string)sourceFunctoid.CustomScript;
+
+                            // Prevent registration collisions by hashing or matching method names
+                            if (!uniqueScriptMethodsRegistry.ContainsKey(functoidKey))
+                            {
+                                uniqueScriptMethodsRegistry[functoidKey] = scriptBody;
+                            }
+                        }
+                    }
+                    catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+                    {
+                        // Safe fallback in case specific nodes don't sport the CustomScript property interface
+                    }
+
                     string inlineExpressionCall = ResolveFunctoidExpression(
                         conn.Source,
                         sourceRootName,
@@ -124,9 +148,6 @@ namespace PdfX.App.Services
             xslt.AppendLine("</xsl:stylesheet>");
             return xslt.ToString();
         }
-        /// <summary>
-        /// Public pass-through to let external rehydration lookups compute node key strings cleanly.
-        /// </summary>
         public string GetNodePathForLookup(XmlNode node)
         {
             return BuildAbsoluteXPath(node);
@@ -217,10 +238,6 @@ namespace PdfX.App.Services
 
             return $"userCSharp:{functionName}({string.Join(", ", optimizedArguments)})";
         }
-
-        /// <summary>
-        /// Extracts runtime canvas data structures and serializes them to a persistent JSON map file.
-        /// </summary>
         public void SaveCanvasLayout(string outputJsonFilePath, string sourcePath, string targetPath)
         {
             var state = new CanvasSaveState
@@ -257,7 +274,8 @@ namespace PdfX.App.Services
                             Id = functoidId,
                             FunctoidName = conn.Source.FunctoidName,
                             X = (float)conn.Source.Location.X, // Using Location.X since raw .X property doesn't exist
-                            Y = (float)conn.Source.Location.Y  // Using Location.Y since raw .Y property doesn't exist
+                            Y = (float)conn.Source.Location.Y,  // Using Location.Y since raw .Y property doesn't exist
+                            CustomScript = conn.Source.CustomScript
                         });
                     }
                 }

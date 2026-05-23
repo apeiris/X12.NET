@@ -33,6 +33,7 @@ namespace X12UtilsFRM {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.parse = new System.Windows.Forms.TabPage();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.btnTransform = new System.Windows.Forms.Button();
             this.lbxTargetSchema = new System.Windows.Forms.ListBox();
             this.btnMap = new System.Windows.Forms.Button();
             this.btnFindSpec = new System.Windows.Forms.Button();
@@ -44,6 +45,8 @@ namespace X12UtilsFRM {
             this.lblSelectedFile = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.rbHtml = new System.Windows.Forms.RadioButton();
+            this.rbXml = new System.Windows.Forms.RadioButton();
             this.btnAddFiles = new System.Windows.Forms.Button();
             this.lbxInfileList = new System.Windows.Forms.ListBox();
             this.rtLog = new System.Windows.Forms.RichTextBox();
@@ -61,8 +64,8 @@ namespace X12UtilsFRM {
             this.trvTarget = new System.Windows.Forms.TreeView();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
-            this.rbHtml = new System.Windows.Forms.RadioButton();
-            this.rbXml = new System.Windows.Forms.RadioButton();
+            this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
+            this.btnFolderBrowse = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.parse.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -124,6 +127,8 @@ namespace X12UtilsFRM {
             // 
             // splitContainer1.Panel1
             // 
+            this.splitContainer1.Panel1.Controls.Add(this.btnFolderBrowse);
+            this.splitContainer1.Panel1.Controls.Add(this.btnTransform);
             this.splitContainer1.Panel1.Controls.Add(this.lbxTargetSchema);
             this.splitContainer1.Panel1.Controls.Add(this.btnMap);
             this.splitContainer1.Panel1.Controls.Add(this.btnFindSpec);
@@ -146,6 +151,20 @@ namespace X12UtilsFRM {
             this.splitContainer1.SplitterDistance = 363;
             this.splitContainer1.SplitterWidth = 3;
             this.splitContainer1.TabIndex = 0;
+            // 
+            // btnTransform
+            // 
+            this.btnTransform.Enabled = false;
+            this.btnTransform.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnTransform.Location = new System.Drawing.Point(181, 552);
+            this.btnTransform.Margin = new System.Windows.Forms.Padding(2);
+            this.btnTransform.Name = "btnTransform";
+            this.btnTransform.Size = new System.Drawing.Size(158, 34);
+            this.btnTransform.TabIndex = 14;
+            this.btnTransform.Text = "Transform";
+            this.toolTip1.SetToolTip(this.btnTransform, "Adds Inbound X12 EDI files saved into $\"{Properties.Settings.Default.X12Flist}\" ");
+            this.btnTransform.UseVisualStyleBackColor = true;
+            this.btnTransform.Click += new System.EventHandler(this.btnTransform_Click);
             // 
             // lbxTargetSchema
             // 
@@ -282,10 +301,37 @@ namespace X12UtilsFRM {
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Transform..";
             // 
+            // rbHtml
+            // 
+            this.rbHtml.AutoSize = true;
+            this.rbHtml.Checked = global::X12UtilsFRM.Properties.Settings.Default.ParseToHTML;
+            this.rbHtml.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "ParseToHTML", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.rbHtml.Location = new System.Drawing.Point(68, 24);
+            this.rbHtml.Margin = new System.Windows.Forms.Padding(2);
+            this.rbHtml.Name = "rbHtml";
+            this.rbHtml.Size = new System.Drawing.Size(74, 24);
+            this.rbHtml.TabIndex = 1;
+            this.rbHtml.Text = "HTML";
+            this.rbHtml.UseVisualStyleBackColor = true;
+            // 
+            // rbXml
+            // 
+            this.rbXml.AutoSize = true;
+            this.rbXml.Checked = global::X12UtilsFRM.Properties.Settings.Default.ParseToXML;
+            this.rbXml.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "ParseToXML", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.rbXml.Location = new System.Drawing.Point(4, 24);
+            this.rbXml.Margin = new System.Windows.Forms.Padding(2);
+            this.rbXml.Name = "rbXml";
+            this.rbXml.Size = new System.Drawing.Size(63, 24);
+            this.rbXml.TabIndex = 0;
+            this.rbXml.TabStop = true;
+            this.rbXml.Text = "XML";
+            this.rbXml.UseVisualStyleBackColor = true;
+            // 
             // btnAddFiles
             // 
             this.btnAddFiles.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnAddFiles.Location = new System.Drawing.Point(4, 30);
+            this.btnAddFiles.Location = new System.Drawing.Point(5, 28);
             this.btnAddFiles.Margin = new System.Windows.Forms.Padding(2);
             this.btnAddFiles.Name = "btnAddFiles";
             this.btnAddFiles.Size = new System.Drawing.Size(122, 25);
@@ -455,6 +501,7 @@ namespace X12UtilsFRM {
             // trvTarget
             // 
             this.trvTarget.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.trvTarget.LineColor = System.Drawing.Color.Empty;
             this.trvTarget.Location = new System.Drawing.Point(0, 0);
             this.trvTarget.Name = "trvTarget";
             this.trvTarget.Size = new System.Drawing.Size(441, 519);
@@ -464,32 +511,15 @@ namespace X12UtilsFRM {
             // 
             this.saveFileDialog1.DefaultExt = "Save As..";
             // 
-            // rbHtml
+            // btnFolderBrowse
             // 
-            this.rbHtml.AutoSize = true;
-            this.rbHtml.Checked = global::X12UtilsFRM.Properties.Settings.Default.ParseToHTML;
-            this.rbHtml.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "ParseToHTML", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.rbHtml.Location = new System.Drawing.Point(68, 24);
-            this.rbHtml.Margin = new System.Windows.Forms.Padding(2);
-            this.rbHtml.Name = "rbHtml";
-            this.rbHtml.Size = new System.Drawing.Size(74, 24);
-            this.rbHtml.TabIndex = 1;
-            this.rbHtml.Text = "HTML";
-            this.rbHtml.UseVisualStyleBackColor = true;
-            // 
-            // rbXml
-            // 
-            this.rbXml.AutoSize = true;
-            this.rbXml.Checked = global::X12UtilsFRM.Properties.Settings.Default.ParseToXML;
-            this.rbXml.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::X12UtilsFRM.Properties.Settings.Default, "ParseToXML", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.rbXml.Location = new System.Drawing.Point(4, 24);
-            this.rbXml.Margin = new System.Windows.Forms.Padding(2);
-            this.rbXml.Name = "rbXml";
-            this.rbXml.Size = new System.Drawing.Size(63, 24);
-            this.rbXml.TabIndex = 0;
-            this.rbXml.TabStop = true;
-            this.rbXml.Text = "XML";
-            this.rbXml.UseVisualStyleBackColor = true;
+            this.btnFolderBrowse.Location = new System.Drawing.Point(132, 30);
+            this.btnFolderBrowse.Name = "btnFolderBrowse";
+            this.btnFolderBrowse.Size = new System.Drawing.Size(34, 23);
+            this.btnFolderBrowse.TabIndex = 15;
+            this.btnFolderBrowse.Text = "(...)";
+            this.btnFolderBrowse.UseVisualStyleBackColor = true;
+            this.btnFolderBrowse.Click += new System.EventHandler(this.btnFolderBrowse_Click);
             // 
             // X12UtilsFRM
             // 
@@ -560,6 +590,9 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label lblSaveAs;
+        private System.Windows.Forms.Button btnTransform;
+        private System.Windows.Forms.Button btnFolderBrowse;
+        private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
     }
 }
 
