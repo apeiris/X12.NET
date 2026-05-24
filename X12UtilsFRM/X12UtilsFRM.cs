@@ -354,8 +354,48 @@ namespace X12UtilsFRM
             }
             XsltTransformer.ApplyXslt(lbxInfileList.Text, lbxTargetSchema.Text, Path.Combine(Path.GetDirectoryName(lbxInfileList.Text), Path.GetFileNameWithoutExtension(lbxInfileList.Text) + "_Transformed.xml"));
         }
+        private void btnClearCanvas_Click(object sender, EventArgs e)
+        {
+            ClearMappingCanvas();
+        }
+
         #endregion Buttons
         #region Toolbox Implementation
+        /// <summary>
+        /// Wipes the entire mapping surface clean, removing both connection lines and functoid control capsules.
+        /// </summary>
+        private void ClearMappingCanvas()
+        {
+            // 1. Confirm with the user to prevent accidental wipes
+            DialogResult result = MessageBox.Show(
+                "Are you sure you want to clear the entire canvas? This will delete all functoids and connection wires.",
+                "Clear Canvas",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                // 2. Erase the connection data collection lines
+                _mapper.ClearAllConnections();
+
+                // 3. Scan the UI collection and purge temporary Functoid controls safely
+                // Loop backwards to safely delete controls while modifying the collection
+                for (int i = pnlFunctoids.Controls.Count - 1; i >= 0; i--)
+                {
+                    Control ctrl = pnlFunctoids.Controls[i];
+
+                    // Check if it's a dynamic functoid capsule (and not the underlying SkiaMapper canvas itself)
+                    if (ctrl is BizTalkFunctoidNode)
+                    {
+                        pnlFunctoids.Controls.RemoveAt(i);
+                        ctrl.Dispose(); // Free system layout memory resources instantly
+                    }
+                }
+
+                Logger.Info("Master canvas layout workspace resetting completed.");
+            }
+        }
         private void InitializeToolbox()
         {
             _originalFloatingHeight = pnlFunctoids.Height - 40;
@@ -483,11 +523,23 @@ namespace X12UtilsFRM
                 Cursor = Cursors.Hand
             };
             btnLoadCanvas.Click += btnLoadCanvas_Click;
-
+            Button btnClearCanvas = new Button
+            {
+                Text = "Clear Canvas",
+                Size = new Size(buttonWidth, 32),
+                Location = new Point(15+buttonWidth, 6 + 45),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(210, 220, 240),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnClearCanvas.Click += btnClearCanvas_Click;
+            //btnLoadCanvas.Click += btnLoadCanvas_Click;
 
             pnlCanvasToolsBottomBar.Controls.Add(btnTransform);
             pnlCanvasToolsBottomBar.Controls.Add(btnSave);
             pnlCanvasToolsBottomBar.Controls.Add(btnLoadCanvas);
+            pnlCanvasToolsBottomBar.Controls.Add(btnClearCanvas);
 
             pnlToolboxWrapper.Controls.Add(pnlCanvasToolsBottomBar);
 

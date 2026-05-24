@@ -625,6 +625,18 @@ namespace X12UtilsFRM
                 );
             }
         }
+        /// <summary>
+        /// Wipes out all active map connections and requests an instant visual repaint.
+        /// </summary>
+        public void ClearAllConnections()
+        {
+            if (this.Connections != null)
+            {
+                this.Connections.Clear();
+            }
+            this.Invalidate(); // Forces the Skia rendering engine to repaint the blank canvas immediately
+            Logger.Info("Mapping canvas links successfully purged.");
+        }
     }
 
     public class MappingConnection
