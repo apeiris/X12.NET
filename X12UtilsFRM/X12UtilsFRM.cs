@@ -93,9 +93,9 @@ namespace X12UtilsFRM
             _mapper.DragEnter += pnlFunctoids_DragEnter;
             _mapper.DragOver += pnlFunctoids_DragEnter;
             _mapper.DragDrop += pnlFunctoids_DragDrop;
-         
 
-          
+
+
 
 
         }
@@ -149,7 +149,7 @@ namespace X12UtilsFRM
             btnToolboxVerticalToggle.Click += ToggleToolboxVertical_Click;
             pnlHeaderBar.Controls.Add(btnToolboxVerticalToggle);
             #endregion vertical toggle button
-            
+
             pnlHeaderBar.Paint += (sender, e) =>  // Handle title text and icon drawing manually via GDI+ to Skia bridging
             {
                 var info = new SKImageInfo(pnlHeaderBar.Width, pnlHeaderBar.Height);
@@ -181,34 +181,55 @@ namespace X12UtilsFRM
                     }
                 }
             };
+
+
             Panel pnlCanvasToolsBottomBar = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 45,
+                Height = 100,
                 BackColor = Color.FromArgb(225, 230, 245),
                 Padding = new Padding(10, 6, 10, 6),
                 BorderStyle = BorderStyle.None
             };
-            pnlCanvasToolsBottomBar.Paint += (s, e) => {
+            pnlCanvasToolsBottomBar.Paint += (s, e) =>
+            {
                 using (var pen = new Pen(Color.FromArgb(190, 200, 220), 1))
                 {
                     e.Graphics.DrawLine(pen, 0, 0, pnlCanvasToolsBottomBar.Width, 0);
                 }
             };
+            int bButtonRows = 2; // bottom button rows
             int buttonWidth = (ToolboxWidth - 10) / 2;
-            Button btnTransform = new Button
+            int buttonHeight = 35;
+
+
+            Button btnClearCanvas = new Button
             {
-                Text = "Transform",
-                Size = new Size(buttonWidth, 32),
+                Text = "Clear Canvas",
+                Size = new Size(buttonWidth, buttonHeight),
                 Location = new Point(10, 6),
                 FlatStyle = FlatStyle.Popup,
                 BackColor = Color.FromArgb(210, 220, 240),
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
-            //btnTransform.Click += Transform_Click;
+
+            btnClearCanvas.Click += btnClearCanvas_Click;
+
+
+            Button btnTransform = new Button
+            {
+                Text = "Transform",
+                Size = new Size(buttonWidth, 32),
+                Location = new Point(10, 6 + (buttonHeight * 2)),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(210, 220, 240),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
             btnTransform.Click += btnGenerateXsltFromCanvas_Click;
-           Button btnSave = new Button
+        //---------------------SAVE-------------------------------
+            Button btnSave = new Button
             {
                 Text = "Save",
                 Size = new Size(buttonWidth, 32),
@@ -218,10 +239,26 @@ namespace X12UtilsFRM
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
-             btnSave.Click += btnSaveCanvas_Click;
+            btnSave.Click += btnSaveCanvas_Click;
+            //---------------------LOAD Canvas-------------------------------
+            Button btnLoadCanvas = new Button
+            {
+                Text = "Load Canvas",
+                Size = new Size(buttonWidth, 32),
+                Location = new Point(15 + buttonWidth, 6 + buttonHeight),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(210, 220, 240),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnLoadCanvas.Click += btnLoadCanvas_Click;
 
+
+
+            pnlCanvasToolsBottomBar.Controls.Add(btnClearCanvas);
             pnlCanvasToolsBottomBar.Controls.Add(btnTransform);
             pnlCanvasToolsBottomBar.Controls.Add(btnSave);
+            pnlCanvasToolsBottomBar.Controls.Add(btnLoadCanvas);
             pnlToolboxWrapper.Controls.Add(pnlCanvasToolsBottomBar);
 
             // 4. Create the main categories scroll container view (Fills remaining space)
@@ -232,7 +269,7 @@ namespace X12UtilsFRM
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Margin= new Padding(0,5,0,0),
+                Margin = new Padding(0, 5, 0, 0),
                 Padding = new Padding(10, 18, 18, 10)
             };
             pnlToolboxWrapper.Controls.Add(pnlToolboxCategoriesContainer);
@@ -307,6 +344,141 @@ namespace X12UtilsFRM
             pnlFunctoids.ResumeLayout(true);
             _mapper.Invalidate();
         }
+
+        private void btnClearCanvas_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                 "Are you sure you want to clear the entire canvas? This will delete all functoids and connection wires.",
+                 "Clear Canvas",
+                 MessageBoxButtons.YesNo,
+                 MessageBoxIcon.Warning
+             );
+
+            if (result == DialogResult.Yes)
+            {
+                // 2. Erase the connection data collection lines
+                _mapper.ClearAllConnections();
+
+                // 3. Scan the UI collection and purge temporary Functoid controls safely
+                // Loop backwards to safely delete controls while modifying the collection
+                for (int i = pnlFunctoids.Controls.Count - 1; i >= 0; i--)
+                {
+                    Control ctrl = pnlFunctoids.Controls[i];
+
+                    // Check if it's a dynamic functoid capsule (and not the underlying SkiaMapper canvas itself)
+                    if (ctrl is BizTalkFunctoidNode)
+                    {
+                        pnlFunctoids.Controls.RemoveAt(i);
+                        ctrl.Dispose(); // Free system layout memory resources instantly
+                    }
+                }
+
+                Logger.Info("Master canvas layout workspace resetting completed.");
+            }
+
+
+        }
+
+        private dynamic FindNodeByXPath(IEnumerable<dynamic> schemaRegistry, string xpath)
+        {
+            var generator = new XsltMapGenerator(_mapper);
+            foreach (var nodeItem in schemaRegistry)
+            {
+                XmlNode xmlNode = nodeItem is XmlNode node ? node : nodeItem.XmlSourceNode;
+                if (xmlNode != null)
+                {
+                    // Internal path matching wrapper
+                    string computedPath = generator.GetNodePathForLookup(xmlNode);
+                    if (computedPath == xpath)
+                    {
+                        return nodeItem;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private void btnLoadCanvas_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
+
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    string jsonRaw = File.ReadAllText(ofd.FileName);
+                    var savedState = System.Text.Json.JsonSerializer.Deserialize<CanvasSaveState>(jsonRaw);
+
+                    // 1. Clear active connections and existing manual functoids from canvas
+                    _mapper.Connections.Clear();
+
+                    // Clean up old visual functoid controls if your mapper holds a separate list
+                    // _mapper.Functoids?.Clear(); 
+
+                    // Track newly generated functoids mapped from their JSON layout coordinate string "X_Y"
+                    var runtimeFunctoidRegistry = new Dictionary<string, dynamic>();
+
+                    // 2. Rehydrate and spawn Functoid nodes onto the canvas interface
+                    foreach (var f in savedState.Functoids)
+                    {
+                        Control newFunctoid = CreateFunctoid(f.FunctoidName, new System.Drawing.Point((int)f.X, (int)f.Y));
+
+                        //  CRITICAL FIX: Mount the control physically onto the WinForms Canvas Surface Container!
+                        pnlFunctoids.Controls.Add(newFunctoid);
+                        newFunctoid.BringToFront();
+
+                        // Map the original file ID token to this live runtime instance pointer
+                        runtimeFunctoidRegistry[f.Id] = newFunctoid;
+                    }
+
+                    // 3. Reconnect Wires
+                    foreach (var wire in savedState.Wires)
+                    {
+                        dynamic sourcePointer = null;
+                        dynamic targetPointer = null;
+
+                        // Resolve Source Pointer
+                        if (wire.SourceType == "SchemaNode")
+                        {
+                            // Find matching node inside left schema tree via XPath helper
+                            sourcePointer = FindNodeByXPath(_mapper.FlatSchemaRegistry, wire.SourceIdOrXPath);
+                        }
+                        else if (wire.SourceType == "Functoid")
+                        {
+                            runtimeFunctoidRegistry.TryGetValue(wire.SourceIdOrXPath, out sourcePointer);
+                        }
+
+                        // Resolve Target Pointer
+                        if (wire.TargetType == "SchemaNode")
+                        {
+                            // Find matching node inside right schema tree via XPath helper
+                            targetPointer = FindNodeByXPath(_mapper.FlatTargetSchemaRegistry, wire.TargetIdOrXPath);
+                        }
+                        else if (wire.TargetType == "Functoid")
+                        {
+                            runtimeFunctoidRegistry.TryGetValue(wire.TargetIdOrXPath, out targetPointer);
+                        }
+
+                        // 4. Append wire connection link if both ends were successfully resolved
+                        if (sourcePointer != null && targetPointer != null)
+                        {
+                            // Create connection structure match matching your canvas model definition
+                            // ❌ ERROR LINE
+                            //  _mapper.Connections.Add(new ConnectionItem(sourcePointer, targetPointer));
+                            _mapper.Connections.Add(new MappingConnection { Source = sourcePointer, Target = targetPointer });
+                        }
+                    }
+
+                    // If your _mapper object handles the canvas lifecycle UI itself:
+                    _mapper.Invalidate();
+                    // 5. Explicitly force the Skia Graphics Canvas control to refresh and repaint the connections
+                    // skiaControl.Invalidate(); 
+
+                    MessageBox.Show("Canvas wire layouts successfully loaded and re-drawn!", "State Restored");
+                }
+            }
+        }
+
         private void ToggleToolbox_Click(object sender, EventArgs e)
         {
             _isToolboxExpanded = !_isToolboxExpanded;
@@ -584,7 +756,7 @@ namespace X12UtilsFRM
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-    
+
             RichTextBoxTarget.ReInitializeAllTextboxes(this);
             Logger.Info("RichTextBox target initialized successfully.");
         }
@@ -596,7 +768,7 @@ namespace X12UtilsFRM
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-         
+
             tt = new ToolTip();
             tt.SetToolTip(btnAddFiles, $"Import X12 Inbound files from {Properties.Settings.Default.X12Folder}");
 
@@ -610,6 +782,8 @@ namespace X12UtilsFRM
             lbxInfileList.SelectedIndex = Properties.Settings.Default.SelectedInfile;
             lbxTargetSchema.SelectedIndex = Properties.Settings.Default.SelectedTargetSchema;
             //lbxTargetSchema.SelectedIndex = 5;
+
+            lblSourceFolder.Text = $"Source Folder: {Properties.Settings.Default.X12Folder}";
 
             btnParse.Enabled = false;
         }
@@ -968,7 +1142,7 @@ namespace X12UtilsFRM
             int fcount = int.Parse(((Label)sender).Text);
             btnParse.Enabled = fcount == 1 ? true : false;
         }
-        
+
         public void LinkXsltToSourceXmlFile(string sourceXmlPath, string xsltFilePath)
         {
             if (string.IsNullOrEmpty(sourceXmlPath) || !File.Exists(sourceXmlPath))
@@ -1054,7 +1228,7 @@ namespace X12UtilsFRM
         }
         private void lbxfileList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string  name = ((ListBox)sender).Name;
+            string name = ((ListBox)sender).Name;
             switch (name)
             {
                 case "lbxInfileList":
@@ -1069,13 +1243,13 @@ namespace X12UtilsFRM
             tt.SetToolTip(lbxInfileList, fileName + " is Selected now..");
             lblInterchangeCount.Text = "0";
             lblInterchangeCount.Text = "1";
-            Properties.Settings.Default.Save(); 
+            Properties.Settings.Default.Save();
         }
         private void label4_Click(object sender, EventArgs e)
         {
 
         }
 
-        
+
     }
 }

@@ -125,6 +125,12 @@ namespace PdfX.App.Services
             return xslt.ToString();
         }
 
+        public string GetNodePathForLookup(XmlNode node)
+        {
+            return BuildAbsoluteXPath(node);
+        }
+
+
         private string ResolveFunctoidExpression(
             dynamic functoidNode,
             string sourceRootName,
@@ -222,35 +228,78 @@ namespace PdfX.App.Services
 
             var connections = (IEnumerable<dynamic>)_mapper.Connections;
 
-            // Extract arbitrary Functoids dropped on the layout grid
-            // Modify based on how your _mapper registers canvas items
             foreach (var conn in connections)
             {
-                if (conn.Source.GetType().Name == "BizTalkFunctoidNode")
+                // --- 1. RESOLVE SOURCE IDENTIFIER ---
+                string sourceIdOrXPath;
+                string sourceType;
+
+                // Safely check if it's an XmlNode OR your custom SchemaNodeItem wrapper
+                if (conn.Source is XmlNode || conn.Source.GetType().Name == "SchemaNodeItem")
                 {
-                    if (!state.Functoids.Any(f => f.Id == conn.Source.Id.ToString()))
+                    sourceType = "SchemaNode";
+                    XmlNode xmlSrc = conn.Source is XmlNode xmlNode ? xmlNode : conn.Source.XmlSourceNode;
+                    sourceIdOrXPath = BuildAbsoluteXPath(xmlSrc);
+                }
+                else // It's a BizTalkFunctoidNode
+                {
+                    sourceType = "Functoid";
+                    string functoidId = conn.Source.GetHashCode().ToString();
+                    sourceIdOrXPath = functoidId;
+
+                    if (!state.Functoids.Any(f => f.Id == functoidId))
                     {
                         state.Functoids.Add(new CanvasFunctoidDto
                         {
-                            Id = conn.Source.Id.ToString(),
+                            Id = functoidId,
                             FunctoidName = conn.Source.FunctoidName,
-                            X = (float)conn.Source.X,
-                            Y = (float)conn.Source.Y
+                            X = (float)conn.Source.Location.X, // Using Location.X since raw .X property doesn't exist
+                            Y = (float)conn.Source.Location.Y,  // Using Location.Y since raw .Y property doesn't exist
+                            CustomScript = conn.Source.CustomScript
                         });
                     }
                 }
 
-                // Map out the visual lines (Wires)
+                // --- 2. RESOLVE TARGET IDENTIFIER ---
+                string targetIdOrXPath;
+                string targetType;
+
+                if (conn.Target is XmlNode || conn.Target.GetType().Name == "SchemaNodeItem")
+                {
+                    targetType = "SchemaNode";
+                    XmlNode xmlTgt = conn.Target is XmlNode xmlNode ? xmlNode : conn.Target.XmlSourceNode;
+                    targetIdOrXPath = BuildAbsoluteXPath(xmlTgt);
+                }
+                else // It's a BizTalkFunctoidNode target
+                {
+                    targetType = "Functoid";
+                    string functoidId = conn.Target.GetHashCode().ToString();
+                    targetIdOrXPath = functoidId;
+
+                    if (!state.Functoids.Any(f => f.Id == functoidId))
+                    {
+                        state.Functoids.Add(new CanvasFunctoidDto
+                        {
+                            Id = functoidId,
+                            FunctoidName = conn.Target.FunctoidName,
+                            X = (float)conn.Target.Location.X,
+                            Y = (float)conn.Target.Location.Y
+                        });
+                    }
+                }
+
+                // --- 3. ADD REGISTERED WIRE LINK ---
                 state.Wires.Add(new CanvasConnectionDto
                 {
-                    SourceType = conn.Source is XmlNode ? "SchemaNode" : "Functoid",
-                    SourceIdOrXPath = conn.Source is XmlNode xmlSrc ? BuildAbsoluteXPath(xmlSrc) : conn.Source.Id.ToString(),
-                    TargetType = conn.Target is XmlNode ? "SchemaNode" : "Functoid",
-                    TargetIdOrXPath = conn.Target is XmlNode xmlTgt ? BuildAbsoluteXPath(xmlTgt) : conn.Target.Id.ToString()
+                    SourceType = sourceType,
+                    SourceIdOrXPath = sourceIdOrXPath,
+                    TargetType = targetType,
+                    TargetIdOrXPath = targetIdOrXPath
                 });
             }
 
-            string jsonString = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            string jsonString = JsonSerializer.Serialize(state, options);
             File.WriteAllText(outputJsonFilePath, jsonString);
         }
     }

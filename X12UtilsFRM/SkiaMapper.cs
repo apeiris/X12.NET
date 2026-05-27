@@ -625,6 +625,18 @@ namespace X12UtilsFRM
                 );
             }
         }
+        public void ClearAllConnections()
+        {
+            if (this.Connections != null)
+            {
+                this.Connections.Clear();
+            }
+
+            
+
+            this.Invalidate(); // Forces the Skia rendering engine to repaint the blank canvas immediately
+            Logger.Info("Mapping canvas links successfully purged.");
+        }
     }
 
     public class MappingConnection
