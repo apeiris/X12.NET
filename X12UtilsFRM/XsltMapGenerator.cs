@@ -33,26 +33,62 @@ namespace PdfX.App.Services
             {
                 return string.Empty;
             }
+
             if (!string.IsNullOrEmpty(sourceFileName) && (sourceFileName.Contains("\\") || sourceFileName.Contains("/")))
                 sourceFileName = System.IO.Path.GetFileName(sourceFileName);
+
             if (!string.IsNullOrEmpty(xsltFileName) && (xsltFileName.Contains("\\") || xsltFileName.Contains("/")))
                 xsltFileName = System.IO.Path.GetFileName(xsltFileName);
+
+            var flatSchemaRegistry = (IEnumerable<dynamic>)_mapper.FlatSchemaRegistry;
+            var flatTargetSchemaRegistry = (IEnumerable<dynamic>)_mapper.FlatTargetSchemaRegistry;
+            var connections = (IEnumerable<dynamic>)_mapper.Connections;
+
+            // Extract the actual root XmlNodes to inspect their namespaces
+            XmlNode sourceRootNode = flatSchemaRegistry.FirstOrDefault()?.XmlSourceNode;
+            XmlNode targetRootNode = flatTargetSchemaRegistry.FirstOrDefault()?.XmlSourceNode;
+
+            string sourceRootName = sourceRootNode?.Name ?? "SOURCE_ROOT";
+            string targetRootName = targetRootNode?.Name ?? "ROOT";
+
+            // --- DYNAMIC NAMESPACE DISCOVERY ---
+            string sourceNamespaceDecl = "";
+            string targetNamespaceDecl = "";
+
+            if (sourceRootNode != null && !string.IsNullOrEmpty(sourceRootNode.Prefix) && !string.IsNullOrEmpty(sourceRootNode.NamespaceURI))
+            {
+                sourceNamespaceDecl = $"xmlns:{sourceRootNode.Prefix}=\"{sourceRootNode.NamespaceURI}\"";
+            }
+            if (targetRootNode != null && !string.IsNullOrEmpty(targetRootNode.Prefix) && !string.IsNullOrEmpty(targetRootNode.NamespaceURI))
+            {
+                targetNamespaceDecl = $"xmlns:{targetRootNode.Prefix}=\"{targetRootNode.NamespaceURI}\"";
+            }
+
             StringBuilder xslt = new StringBuilder();
-            // 1. Core Header Definitions
+
+            // 1. Core Header Definitions (with dynamically injected namespaces)
             xslt.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             xslt.AppendLine("<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" ");
             xslt.AppendLine("                xmlns:msxsl=\"urn:schemas-microsoft-com:xslt\" ");
             xslt.AppendLine("                xmlns:var=\"urn:var\" ");
             xslt.AppendLine("                xmlns:userCSharp=\"urn:userCSharp\" ");
+
+            if (!string.IsNullOrEmpty(sourceNamespaceDecl))
+                xslt.AppendLine($"                {sourceNamespaceDecl} ");
+            if (!string.IsNullOrEmpty(targetNamespaceDecl))
+                xslt.AppendLine($"                {targetNamespaceDecl} ");
+
             xslt.AppendLine("                exclude-result-prefixes=\"msxsl var userCSharp\" ");
             xslt.AppendLine("                version=\"1.0\">");
             xslt.AppendLine("  <xsl:output method=\"xml\" omit-xml-declaration=\"no\" indent=\"yes\" />");
             xslt.AppendLine();
+
             // 2. Global Metadata Parameters
             xslt.AppendLine("  ");
             xslt.AppendLine($"  <xsl:param name=\"SourceFileName\" select=\"'{sourceFileName}'\" />");
             xslt.AppendLine($"  <xsl:param name=\"XsltFileName\" select=\"'{xsltFileName}'\" />");
             xslt.AppendLine();
+
             // 3. Root Template Match Entry Point with Processing Instruction
             xslt.AppendLine("  <xsl:template match=\"/\">");
             xslt.AppendLine("    <xsl:processing-instruction name=\"xml-stylesheet\">");
@@ -63,23 +99,22 @@ namespace PdfX.App.Services
             xslt.AppendLine("    <xsl:apply-templates select=\"/*\" />");
             xslt.AppendLine("  </xsl:template>");
             xslt.AppendLine();
-            var flatSchemaRegistry = (IEnumerable<dynamic>)_mapper.FlatSchemaRegistry;
-            var flatTargetSchemaRegistry = (IEnumerable<dynamic>)_mapper.FlatTargetSchemaRegistry;
-            var connections = (IEnumerable<dynamic>)_mapper.Connections;
-            string sourceRootName = flatSchemaRegistry.FirstOrDefault()?.XmlSourceNode.Name ?? "SOURCE_ROOT";
-            string targetRootName = flatTargetSchemaRegistry.FirstOrDefault()?.XmlSourceNode.Name ?? "ROOT";
+
             xslt.AppendLine($"  <xsl:template match=\"{sourceRootName}\">");
             xslt.AppendLine($"    <{targetRootName}>");
             xslt.AppendLine("      <XSLT_NAME><xsl:value-of select=\"$XsltFileName\" /></XSLT_NAME>");
             xslt.AppendLine();
+
             int variableCounter = 1;
             Dictionary<string, string> uniqueScriptMethodsRegistry = new Dictionary<string, string>();
             var targetBoundConnections = connections.Where(c =>
                 c.Target is XmlNode || c.Target.GetType().Name == "SchemaNodeItem").ToList();
+
             foreach (var conn in targetBoundConnections)
             {
                 XmlNode targetXmlNode = conn.Target is XmlNode xmlTgt ? xmlTgt : conn.Target.XmlSourceNode;
                 if (targetXmlNode == null) continue;
+
                 xslt.AppendLine($"      <{targetXmlNode.Name}>");
                 if (conn.Source is XmlNode || conn.Source.GetType().Name == "SchemaNodeItem")
                 {
@@ -132,10 +167,10 @@ namespace PdfX.App.Services
 
 
         private string ResolveFunctoidExpression(
-            dynamic functoidNode,
-            string sourceRootName,
-            Dictionary<string, string> scriptRegistry,
-            IEnumerable<dynamic> connections)
+     dynamic functoidNode,
+     string sourceRootName,
+     Dictionary<string, string> scriptRegistry,
+     IEnumerable<dynamic> connections)
         {
             var inputLinks = connections.Where(c => object.ReferenceEquals(c.Target, functoidNode)).ToList();
             List<string> optimizedArguments = new List<string>();
@@ -149,7 +184,6 @@ namespace PdfX.App.Services
                     XmlNode inputXmlNode = inputConn.Source is XmlNode xmlIn ? xmlIn : inputConn.Source.XmlSourceNode;
                     if (inputXmlNode != null)
                     {
-                        // Now calling internal BuildAbsoluteXPath method directly
                         string inputPath = BuildAbsoluteXPath(inputXmlNode).Replace(sourceRootName + "/", "");
                         optimizedArguments.Add($"string({inputPath})");
                         formalParameters.Add($"string p_arg{argIdx}");
@@ -171,26 +205,35 @@ namespace PdfX.App.Services
 
             int argumentCount = optimizedArguments.Count;
             string functionName = $"Fct_{toolName}_{argumentCount}";
+            string paramsJoined = string.Join(", ", formalParameters);
 
             if (!scriptRegistry.ContainsKey(functionName))
             {
                 StringBuilder methodBody = new StringBuilder();
-                string paramsJoined = string.Join(", ", formalParameters);
 
                 switch (toolName)
                 {
                     case "Concatenate":
-                        methodBody.AppendLine($"    public string {functionName}(params string[] segments)");
+                        // GENERATES: public string Fct_Concatenate_2(string p_arg1, string p_arg2)
+                        methodBody.AppendLine($"    public string {functionName}({paramsJoined})");
                         methodBody.AppendLine("    {");
-                        methodBody.AppendLine("        return string.Concat(segments);");
+
+                        // Get the variable names: p_arg1, p_arg2, etc.
+                        var catVars = formalParameters.Select(p => p.Split(' ')[1]);
+                        methodBody.AppendLine($"        return string.Concat({string.Join(", ", catVars)});");
                         methodBody.AppendLine("    }");
                         break;
 
                     case "Add":
-                        methodBody.AppendLine($"    public string {functionName}(params string[] numbers)");
+                        // GENERATES: public string Fct_Add_2(string p_arg1, string p_arg2)
+                        methodBody.AppendLine($"    public string {functionName}({paramsJoined})");
                         methodBody.AppendLine("    {");
                         methodBody.AppendLine("        double total = 0;");
-                        methodBody.AppendLine("        foreach(var num in numbers) { if (double.TryParse(num, out double val)) total += val; }");
+                        foreach (var param in formalParameters)
+                        {
+                            string varName = param.Split(' ')[1];
+                            methodBody.AppendLine($"        if (double.TryParse({varName}, out double val_{varName})) total += val_{varName};");
+                        }
                         methodBody.AppendLine("        return total.ToString();");
                         methodBody.AppendLine("    }");
                         break;
@@ -217,7 +260,6 @@ namespace PdfX.App.Services
 
             return $"userCSharp:{functionName}({string.Join(", ", optimizedArguments)})";
         }
-
         public void SaveCanvasLayout(string outputJsonFilePath, string sourcePath, string targetPath)
         {
             var state = new CanvasSaveState

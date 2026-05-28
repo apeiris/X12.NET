@@ -33,6 +33,7 @@ namespace X12UtilsFRM {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.parse = new System.Windows.Forms.TabPage();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.btnApplyXslt = new System.Windows.Forms.Button();
             this.grpFileExtensionFilter = new System.Windows.Forms.GroupBox();
             this.rbtfXslt = new System.Windows.Forms.RadioButton();
             this.rbtfTxt = new System.Windows.Forms.RadioButton();
@@ -43,6 +44,7 @@ namespace X12UtilsFRM {
             this.btnFindSpec = new System.Windows.Forms.Button();
             this.btnHippaParse = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
+            this.btnParse = new System.Windows.Forms.Button();
             this.lblInterchangeCount = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.lblSelectedFile = new System.Windows.Forms.Label();
@@ -64,15 +66,11 @@ namespace X12UtilsFRM {
             this.tbpMap = new System.Windows.Forms.TabPage();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.pnlFunctoids = new System.Windows.Forms.Panel();
-            this.button2 = new System.Windows.Forms.Button();
-            this.btnGenerateXsltFromCanvas = new System.Windows.Forms.Button();
             this.trvTarget = new System.Windows.Forms.TreeView();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
-            this.btnParse = new System.Windows.Forms.Button();
-            this.btnApplyXslt = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.parse.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -86,7 +84,6 @@ namespace X12UtilsFRM {
             this.FormLocations.SuspendLayout();
             this.tbpMap.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
-            this.pnlFunctoids.SuspendLayout();
             this.SuspendLayout();
             // 
             // statusStrip1
@@ -161,6 +158,19 @@ namespace X12UtilsFRM {
             this.splitContainer1.SplitterDistance = 363;
             this.splitContainer1.SplitterWidth = 3;
             this.splitContainer1.TabIndex = 0;
+            // 
+            // btnApplyXslt
+            // 
+            this.btnApplyXslt.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnApplyXslt.Location = new System.Drawing.Point(211, 552);
+            this.btnApplyXslt.Margin = new System.Windows.Forms.Padding(2);
+            this.btnApplyXslt.Name = "btnApplyXslt";
+            this.btnApplyXslt.Size = new System.Drawing.Size(133, 34);
+            this.btnApplyXslt.TabIndex = 17;
+            this.btnApplyXslt.Text = "Apply Xslt";
+            this.btnApplyXslt.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnApplyXslt.UseVisualStyleBackColor = true;
+            this.btnApplyXslt.Click += new System.EventHandler(this.btnApplyXslt_Click);
             // 
             // grpFileExtensionFilter
             // 
@@ -286,6 +296,20 @@ namespace X12UtilsFRM {
             this.button1.Text = "Any Xml to HTML";
             this.toolTip1.SetToolTip(this.button1, "Adds Inbound X12 EDI files saved into $\"{Properties.Settings.Default.X12Flist}\" ");
             this.button1.UseVisualStyleBackColor = true;
+            // 
+            // btnParse
+            // 
+            this.btnParse.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnParse.Location = new System.Drawing.Point(211, 508);
+            this.btnParse.Margin = new System.Windows.Forms.Padding(2);
+            this.btnParse.Name = "btnParse";
+            this.btnParse.Size = new System.Drawing.Size(122, 34);
+            this.btnParse.TabIndex = 7;
+            this.btnParse.Text = "<< Parse";
+            this.btnParse.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.toolTip1.SetToolTip(this.btnParse, "Adds Inbound X12 EDI files saved into $\"{Properties.Settings.Default.X12Flist}\" ");
+            this.btnParse.UseVisualStyleBackColor = true;
+            this.btnParse.Click += new System.EventHandler(this.btnParse_Click);
             // 
             // lblInterchangeCount
             // 
@@ -531,8 +555,6 @@ namespace X12UtilsFRM {
             // 
             // pnlFunctoids
             // 
-            this.pnlFunctoids.Controls.Add(this.button2);
-            this.pnlFunctoids.Controls.Add(this.btnGenerateXsltFromCanvas);
             this.pnlFunctoids.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlFunctoids.Location = new System.Drawing.Point(3, 3);
             this.pnlFunctoids.Name = "pnlFunctoids";
@@ -540,25 +562,6 @@ namespace X12UtilsFRM {
             this.pnlFunctoids.TabIndex = 0;
             this.pnlFunctoids.DragDrop += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragDrop);
             this.pnlFunctoids.DragEnter += new System.Windows.Forms.DragEventHandler(this.pnlFunctoids_DragEnter);
-            // 
-            // button2
-            // 
-            this.button2.Location = new System.Drawing.Point(3, 630);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(97, 29);
-            this.button2.TabIndex = 2;
-            this.button2.Text = "Transform";
-            this.button2.UseVisualStyleBackColor = true;
-            // 
-            // btnGenerateXsltFromCanvas
-            // 
-            this.btnGenerateXsltFromCanvas.Location = new System.Drawing.Point(106, 630);
-            this.btnGenerateXsltFromCanvas.Name = "btnGenerateXsltFromCanvas";
-            this.btnGenerateXsltFromCanvas.Size = new System.Drawing.Size(97, 29);
-            this.btnGenerateXsltFromCanvas.TabIndex = 1;
-            this.btnGenerateXsltFromCanvas.Text = "Transform";
-            this.btnGenerateXsltFromCanvas.UseVisualStyleBackColor = true;
-            this.btnGenerateXsltFromCanvas.Click += new System.EventHandler(this.btnGenerateXsltFromCanvas_Click);
             // 
             // trvTarget
             // 
@@ -576,33 +579,6 @@ namespace X12UtilsFRM {
             // openFileDialog1
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
-            // 
-            // btnParse
-            // 
-            this.btnParse.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnParse.Location = new System.Drawing.Point(211, 508);
-            this.btnParse.Margin = new System.Windows.Forms.Padding(2);
-            this.btnParse.Name = "btnParse";
-            this.btnParse.Size = new System.Drawing.Size(122, 34);
-            this.btnParse.TabIndex = 7;
-            this.btnParse.Text = "<< Parse";
-            this.btnParse.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.toolTip1.SetToolTip(this.btnParse, "Adds Inbound X12 EDI files saved into $\"{Properties.Settings.Default.X12Flist}\" ");
-            this.btnParse.UseVisualStyleBackColor = true;
-            this.btnParse.Click += new System.EventHandler(this.btnParse_Click);
-            // 
-            // btnApplyXslt
-            // 
-            this.btnApplyXslt.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnApplyXslt.Location = new System.Drawing.Point(211, 552);
-            this.btnApplyXslt.Margin = new System.Windows.Forms.Padding(2);
-            this.btnApplyXslt.Name = "btnApplyXslt";
-            this.btnApplyXslt.Size = new System.Drawing.Size(133, 34);
-            this.btnApplyXslt.TabIndex = 17;
-            this.btnApplyXslt.Text = "Apply Xslt";
-            this.btnApplyXslt.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnApplyXslt.UseVisualStyleBackColor = true;
-            this.btnApplyXslt.Click += new System.EventHandler(this.btnApplyXslt_Click);
             // 
             // X12UtilsFRM
             // 
@@ -633,7 +609,6 @@ namespace X12UtilsFRM {
             this.FormLocations.ResumeLayout(false);
             this.tbpMap.ResumeLayout(false);
             this.tableLayoutPanel1.ResumeLayout(false);
-            this.pnlFunctoids.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -669,12 +644,10 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.Panel pnlFunctoids;
         private System.Windows.Forms.ListBox lbxTargetSchema;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
-        private System.Windows.Forms.Button btnGenerateXsltFromCanvas;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label lblSaveAs;
-        private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Label lblSourceFolder;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;

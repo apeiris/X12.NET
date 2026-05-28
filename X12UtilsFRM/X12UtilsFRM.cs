@@ -181,7 +181,10 @@ namespace X12UtilsFRM
                     }
                 }
             };
-
+            // bottom tool bar with action buttons
+            int bButtonRows = 2; // bottom button rows
+            int buttonWidth = (ToolboxWidth - 10) / 2;
+            int buttonHeight = 30;
 
             Panel pnlCanvasToolsBottomBar = new Panel
             {
@@ -198,13 +201,8 @@ namespace X12UtilsFRM
                     e.Graphics.DrawLine(pen, 0, 0, pnlCanvasToolsBottomBar.Width, 0);
                 }
             };
-            int bButtonRows = 2; // bottom button rows
-            int buttonWidth = (ToolboxWidth - 10) / 2;
-            int buttonHeight = 35;
 
-
-            Button btnClearCanvas = new Button
-            {
+            Button btnClearCanvas = new Button  {
                 Text = "Clear Canvas",
                 Size = new Size(buttonWidth, buttonHeight),
                 Location = new Point(10, 6),
@@ -213,26 +211,11 @@ namespace X12UtilsFRM
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
-
             btnClearCanvas.Click += btnClearCanvas_Click;
 
-
-            Button btnTransform = new Button
-            {
-                Text = "Transform",
-                Size = new Size(buttonWidth, 32),
-                Location = new Point(10, 6 + (buttonHeight * 2)),
-                FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(210, 220, 240),
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Cursor = Cursors.Hand
-            };
-            btnTransform.Click += btnGenerateXsltFromCanvas_Click;
-        //---------------------SAVE-------------------------------
-            Button btnSave = new Button
-            {
+            Button btnSave = new Button  {
                 Text = "Save",
-                Size = new Size(buttonWidth, 32),
+                Size = new Size(buttonWidth, buttonHeight),
                 Location = new Point(15 + buttonWidth, 6),
                 FlatStyle = FlatStyle.Popup,
                 BackColor = Color.FromArgb(210, 220, 240),
@@ -240,18 +223,33 @@ namespace X12UtilsFRM
                 Cursor = Cursors.Hand
             };
             btnSave.Click += btnSaveCanvas_Click;
-            //---------------------LOAD Canvas-------------------------------
-            Button btnLoadCanvas = new Button
-            {
-                Text = "Load Canvas",
+
+
+            Button btnTransform = new Button  {
+                Text = "Transform",
                 Size = new Size(buttonWidth, 32),
-                Location = new Point(15 + buttonWidth, 6 + buttonHeight),
+                Location = new Point(10, 10 + (buttonHeight)),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(210, 220, 240),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnTransform.Click += btnGenerateXsltFromCanvas_Click;
+
+            Button btnLoadCanvas = new Button      {
+                Text = "Load Canvas",
+                Size = new Size(buttonWidth, buttonHeight),
+                Location = new Point(15 + buttonWidth, 10 + buttonHeight),
                 FlatStyle = FlatStyle.Popup,
                 BackColor = Color.FromArgb(210, 220, 240),
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
             btnLoadCanvas.Click += btnLoadCanvas_Click;
+
+        
+
+
 
 
 
@@ -832,7 +830,7 @@ namespace X12UtilsFRM
         {
             Logger.Info($"IC#={args.InterchangeControlNumber}-FG={args.FunctionalGroupControlNumber}-Segment={args.Segment}{args.Message}");
         }
-        private (string Text,bool IsChecked) checkedOption(GroupBox grp)
+        private (string Text, bool IsChecked) checkedOption(GroupBox grp)
         {
             var checkedControl = grp.Controls.Cast<Control>().FirstOrDefault(c => ((dynamic)c).Checked == true);
             if (checkedControl != null)
@@ -842,12 +840,12 @@ namespace X12UtilsFRM
             }
             else return (null, false);
 
-            
+
         }
         private void btnParse_Click(object sender, EventArgs e)
         {
             string x = "";
-            var ( _checkedOption, isChecked) = checkedOption(groupBox1);
+            var (_checkedOption, isChecked) = checkedOption(groupBox1);
 
             try
             {
@@ -1226,7 +1224,7 @@ namespace X12UtilsFRM
                 var generator = new XsltMapGenerator(_mapper);
                 string directory = Path.GetDirectoryName(lbxInfileList.Text);
                 string filenameWithoutExt = Path.GetFileNameWithoutExtension(lbxInfileList.Text);
-                string targetSchemaFileName = Path.Combine(directory, "Transforms", filenameWithoutExt + ".xslt");
+                string targetSchemaFileName = Path.Combine(directory, filenameWithoutExt + ".xslt");
                 string transformDirectory = Path.GetDirectoryName(targetSchemaFileName);
                 if (!Directory.Exists(transformDirectory))
                 {
@@ -1269,21 +1267,21 @@ namespace X12UtilsFRM
             lblInterchangeCount.Text = "1";
             Properties.Settings.Default.Save();
         }
-       
+
 
         private void lblSourceFolder_Click(object sender, EventArgs e)
         {
             using (FolderBrowserDialog fb = new FolderBrowserDialog())
             {
                 fb.Description = "Select the X12 Source Folder";
-                
+
 
                 // Assign the initial directory from your application properties
                 // Adjust the exact settings path if your namespace differs (e.g., Properties.Settings.Default...)
                 if (!string.IsNullOrWhiteSpace(Properties.Settings.Default.X12Folder) &&
                     System.IO.Directory.Exists(Properties.Settings.Default.X12Folder))
                 {
-                    fb.SelectedPath= Properties.Settings.Default.X12Folder;
+                    fb.SelectedPath = Properties.Settings.Default.X12Folder;
                 }
 
                 // Show the dialog and check if the user clicked OK
@@ -1309,28 +1307,30 @@ namespace X12UtilsFRM
         private void extensionFilter_CheckedChanged(object sender, EventArgs e)
         {
             var (text, isChecked) = checkedOption(grpFileExtensionFilter);
-            if(!isChecked) return;
-            switch (text.ToLower()) {
+            if (!isChecked) return;
+            switch (text.ToLower())
+            {
                 case "txt":
                     lbxTargetSchema.Items.Clear();
                     lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
                     break;
-                case "xml": 
+                case "xml":
                     lbxTargetSchema.Items.Clear();
                     lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml")); break;
                 case "xslt":
                     lbxTargetSchema.Items.Clear();
                     lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xslt"));
-                    break;  
+                    break;
             }
-           
+
 
         }
 
         private void btnApplyXslt_Click(object sender, EventArgs e)
         {
-          
-          XsltTransformer.ApplyXslt(lbxInfileList.Text,lbxTargetSchema.Text,Path.Combine(Path.GetFileNameWithoutExtension(lbxInfileList.Text),"out.xml"));
+            string infile = lbxInfileList.Text;
+            string outXml = Path.Combine(Path.GetDirectoryName(infile),$"{Path.GetFileNameWithoutExtension(infile)}_out.xml" );
+            XsltTransformer.ApplyXslt(infile, lbxTargetSchema.Text,outXml );
         }
 
         private void MenuBrowse_Click(object sender, EventArgs e)
@@ -1366,7 +1366,7 @@ namespace X12UtilsFRM
                 MessageBox.Show("Please select an item first to delete.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
-       
+
 
         private void SetupListboxContextMenus()
         {
