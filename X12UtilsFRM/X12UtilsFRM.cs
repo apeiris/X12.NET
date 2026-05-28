@@ -94,7 +94,7 @@ namespace X12UtilsFRM
             _mapper.DragOver += pnlFunctoids_DragEnter;
             _mapper.DragDrop += pnlFunctoids_DragDrop;
 
-
+            SetupListboxContextMenus();
 
 
 
@@ -766,6 +766,21 @@ namespace X12UtilsFRM
             RichTextBoxTarget.ReInitializeAllTextboxes(this);
             Logger.Info("RichTextBox logging attached (UI-safe).");
         }
+
+        private void PopulateFileList(string folderPath)
+        {
+            if (Directory.Exists(folderPath))
+            {
+                lbxInfileList.Items.Clear();
+                lbxInfileList.Items.AddRange(Directory.GetFiles(folderPath, "*.txt"));
+                lbxInfileList.Items.AddRange(Directory.GetFiles(folderPath, "*.xml"));
+                lbxInfileList.Items.AddRange(Directory.GetFiles(folderPath, "*.xslt"));
+            }
+            else
+            {
+                MessageBox.Show($"The specified folder path does not exist: {folderPath}", "Folder Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
         private void Form1_Load(object sender, EventArgs e)
         {
 
@@ -783,7 +798,7 @@ namespace X12UtilsFRM
             lbxTargetSchema.SelectedIndex = Properties.Settings.Default.SelectedTargetSchema;
             //lbxTargetSchema.SelectedIndex = 5;
 
-            lblSourceFolder.Text = $"Source Folder: {Properties.Settings.Default.X12Folder}";
+            lblSourceFolder.Text = $"Source Folder: {Properties.Settings.Default.X12Folder} (..)";
 
             btnParse.Enabled = false;
         }
@@ -817,16 +832,22 @@ namespace X12UtilsFRM
         {
             Logger.Info($"IC#={args.InterchangeControlNumber}-FG={args.FunctionalGroupControlNumber}-Segment={args.Segment}{args.Message}");
         }
-        private string checkedOption(GroupBox grp)
+        private (string Text,bool IsChecked) checkedOption(GroupBox grp)
         {
             var checkedControl = grp.Controls.Cast<Control>().FirstOrDefault(c => ((dynamic)c).Checked == true);
-            Logger.Info($"Found control type: {checkedControl.Name}");
-            return checkedControl.Text;
+            if (checkedControl != null)
+            {
+                Logger.Info($"Found control type: {checkedControl.Name}");
+                return (checkedControl.Text, true);
+            }
+            else return (null, false);
+
+            
         }
         private void btnParse_Click(object sender, EventArgs e)
         {
             string x = "";
-            string _checkedOption = checkedOption(groupBox1);
+            var ( _checkedOption, isChecked) = checkedOption(groupBox1);
 
             try
             {
@@ -848,9 +869,10 @@ namespace X12UtilsFRM
                 MessageBox.Show(ex.Message);
                 return;
             }
-            DisplayHtml(x);
+            DisplayHtml(_checkedOption);
             tabControl1.SelectedIndex = (int)enmTabPages.browser;
         }
+
         public string X12Tohtml(string x12)
         {
             var htmlService = new X12HtmlTransformationService(new X12EdiParsingService(Properties.Settings.Default.SurppressParsingComments, new x12Test.specFinder()));
@@ -1089,6 +1111,8 @@ namespace X12UtilsFRM
         #region Code Compilation Utilities (Xslt Outbound Maps)
         #endregion
 
+
+
         private void btnSaveCanvas_Click(object sender, EventArgs e)
         {
             using (SaveFileDialog sfd = new SaveFileDialog())
@@ -1245,11 +1269,145 @@ namespace X12UtilsFRM
             lblInterchangeCount.Text = "1";
             Properties.Settings.Default.Save();
         }
-        private void label4_Click(object sender, EventArgs e)
+       
+
+        private void lblSourceFolder_Click(object sender, EventArgs e)
         {
+            using (FolderBrowserDialog fb = new FolderBrowserDialog())
+            {
+                fb.Description = "Select the X12 Source Folder";
+                
+
+                // Assign the initial directory from your application properties
+                // Adjust the exact settings path if your namespace differs (e.g., Properties.Settings.Default...)
+                if (!string.IsNullOrWhiteSpace(Properties.Settings.Default.X12Folder) &&
+                    System.IO.Directory.Exists(Properties.Settings.Default.X12Folder))
+                {
+                    fb.SelectedPath= Properties.Settings.Default.X12Folder;
+                }
+
+                // Show the dialog and check if the user clicked OK
+                if (fb.ShowDialog() == DialogResult.OK)
+                {
+                    // Update the setting with the new path
+                    Properties.Settings.Default.X12Folder = fb.SelectedPath;
+
+                    // Save the settings persistantly 
+                    Properties.Settings.Default.Save();
+
+                    // Optional: Update the label or a textbox text to reflect the new selection
+
+                    lblSourceFolder.Text = $"Source Folder: {fb.SelectedPath} (..)";
+                    lbxfileList_SelectedIndexChanged(lbxInfileList, null);
+                    PopulateFileList(Properties.Settings.Default.X12Folder);
+
+
+                }
+            }
+        }
+
+        private void extensionFilter_CheckedChanged(object sender, EventArgs e)
+        {
+            var (text, isChecked) = checkedOption(grpFileExtensionFilter);
+            if(!isChecked) return;
+            switch (text.ToLower()) {
+                case "txt":
+                    lbxTargetSchema.Items.Clear();
+                    lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
+                    break;
+                case "xml": 
+                    lbxTargetSchema.Items.Clear();
+                    lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml")); break;
+                case "xslt":
+                    lbxTargetSchema.Items.Clear();
+                    lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xslt"));
+                    break;  
+            }
+           
 
         }
 
+        private void btnApplyXslt_Click(object sender, EventArgs e)
+        {
+          
+          XsltTransformer.ApplyXslt(lbxInfileList.Text,lbxTargetSchema.Text,Path.Combine(Path.GetFileNameWithoutExtension(lbxInfileList.Text),"out.xml"));
+        }
 
+        private void MenuBrowse_Click(object sender, EventArgs e)
+        {
+            // Identify which ListBox was right-clicked
+            ToolStripMenuItem clickedItem = (ToolStripMenuItem)sender;
+            ContextMenuStrip ownerMenu = (ContextMenuStrip)clickedItem.Owner;
+            ListBox parentControl = ownerMenu.SourceControl as ListBox;
+            string htmlContent = $@"<html><head><meta http-equiv=""X-UA-Compatible"" content=""IE=edge"" /></head><body><xmp>{ContentFromFile(parentControl.Text)}</xmp></body></html>";
+            DisplayHtml(htmlContent);
+            tabControl1.SelectedIndex = (int)enmTabPages.browser;
+        }
+
+        private void MenuDelete_Click(object sender, EventArgs e)
+        {
+            // Identify which ListBox was right-clicked
+            ToolStripMenuItem menuItem = (ToolStripMenuItem)sender;
+            ContextMenuStrip owner = (ContextMenuStrip)menuItem.Owner;
+            ListBox targetListBox = (ListBox)owner.SourceControl;
+
+            // Check if an item is selected to be deleted
+            if (targetListBox.SelectedItem != null)
+            {
+                string removedItem = targetListBox.SelectedItem.ToString();
+
+                // Remove from UI
+                targetListBox.Items.Remove(targetListBox.SelectedItem);
+
+                Logger.Info($"Removed '{removedItem}' from {targetListBox.Name}");
+            }
+            else
+            {
+                MessageBox.Show("Please select an item first to delete.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+       
+
+        private void SetupListboxContextMenus()
+        {
+            // Create the ContextMenuStrip
+            ContextMenuStrip listboxMenu = new ContextMenuStrip();
+
+            // Create the Browse item
+            ToolStripMenuItem menuBrowse = new ToolStripMenuItem("Browse...");
+            menuBrowse.Click += MenuBrowse_Click;
+
+            // Create the Delete item
+            ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete");
+            menuDelete.Click += MenuDelete_Click;
+
+            // Add items to the context menu
+            listboxMenu.Items.Add(menuBrowse);
+            listboxMenu.Items.Add(new ToolStripSeparator()); // Optional visual separator line
+            listboxMenu.Items.Add(menuDelete);
+
+            // Assign the same context menu to both ListBoxes
+            lbxInfileList.ContextMenuStrip = listboxMenu;
+            lbxTargetSchema.ContextMenuStrip = listboxMenu;
+
+            // Optional: Select the ListBox item automatically on a right-click
+            lbxInfileList.MouseDown += ListBox_MouseDown;
+            lbxTargetSchema.MouseDown += ListBox_MouseDown;
+        }
+
+        private void ListBox_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                ListBox listBox = (ListBox)sender;
+                // Find the index of the item corresponding to the coordinates of the mouse click
+                int index = listBox.IndexFromPoint(e.Location);
+
+                if (index != ListBox.NoMatches)
+                {
+                    listBox.SelectedIndex = index; // Programmatically select it
+                }
+            }
+        }
     }
 }

@@ -109,7 +109,7 @@ namespace X12UtilsFRM.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool ParseToXML {
             get {
                 return ((bool)(this["ParseToXML"]));
@@ -121,7 +121,7 @@ namespace X12UtilsFRM.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ParseToHTML {
             get {
                 return ((bool)(this["ParseToHTML"]));
