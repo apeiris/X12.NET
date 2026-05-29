@@ -1235,7 +1235,7 @@ namespace X12UtilsFRM
                 LinkXsltToSourceXmlFile(lbxInfileList.Text, targetSchemaFileName);
 
                 ShowFormWith(compiledXslt);
-
+                rbtfXslt.Checked = true;
                 MessageBox.Show($"XSLT Map generated successfully at:\n{targetSchemaFileName}", "Success");
             }
             catch (Exception ex)
@@ -1380,6 +1380,7 @@ namespace X12UtilsFRM
             string infile = lbxInfileList.Text;
             string outXml = Path.Combine(Path.GetDirectoryName(infile),$"{Path.GetFileNameWithoutExtension(infile)}_out.xml" );
             XsltTransformer.ApplyXslt(infile, lbxTargetSchema.Text,outXml );
+            rbtfXml.Checked = true;
         }
 
         private void MenuBrowse_Click(object sender, EventArgs e)
