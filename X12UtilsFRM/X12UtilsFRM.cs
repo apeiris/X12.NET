@@ -1370,7 +1370,16 @@ namespace X12UtilsFRM
                     lbxTargetSchema.Items.Clear();
                     lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xslt"));
                     break;
+                case "all": // dummy case to reset the filter and show all supported file types
+                    lbxTargetSchema.Items.Clear();
+                    lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.txt"));
+                    lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xml"));
+                    lbxTargetSchema.Items.AddRange(Directory.GetFiles(Properties.Settings.Default.X12Folder, "*.xslt"));
+                    break;
+
             }
+
+
 
 
         }
