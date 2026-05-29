@@ -804,6 +804,11 @@ namespace X12UtilsFRM
         {
             Properties.Settings.Default.Save();
         }
+        /// <summary>
+        /// test
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         #endregion
         #region File Processing Actions
         private void btnMap_Click(object sender, EventArgs e)
