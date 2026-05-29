@@ -1234,6 +1234,8 @@ namespace X12UtilsFRM
                 File.WriteAllText(targetSchemaFileName, compiledXslt);
                 LinkXsltToSourceXmlFile(lbxInfileList.Text, targetSchemaFileName);
 
+                ShowFormWith(compiledXslt);
+
                 MessageBox.Show($"XSLT Map generated successfully at:\n{targetSchemaFileName}", "Success");
             }
             catch (Exception ex)
@@ -1241,6 +1243,53 @@ namespace X12UtilsFRM
                 MessageBox.Show($"Failed to generate XSLT map layout:\n{ex.Message}", "Generation Error");
             }
         }
+
+        private void ShowFormWith(string stringToShow)
+        {
+            using (Form previewForm = new Form { Text = "Compiled Script XSLT Output", Width = 700, Height = 550, StartPosition = FormStartPosition.CenterParent })
+            {
+                // 1. Create the Close Button
+                Button btnClose = new Button
+                {
+                    Text = "Close",
+                    DialogResult = DialogResult.Cancel, // Automatically closes the dialog when clicked
+                    Width = 100,
+                    Height = 30,
+                    Location = new Point(560, 10) // Positions it on the right side of the bottom panel
+                };
+
+                // Ensure pressing the Enter or Esc key also closes the form naturally
+                previewForm.CancelButton = btnClose;
+                previewForm.AcceptButton = btnClose;
+
+                // 2. Create a bottom panel to hold the button neatly
+                Panel buttonPanel = new Panel
+                {
+                    Dock = DockStyle.Bottom,
+                    Height = 50
+                };
+                buttonPanel.Controls.Add(btnClose);
+
+                // 3. Create the Text Box (Change DockStyle.Fill behavior to respect the bottom panel)
+                TextBox txtPreview = new TextBox
+                {
+                    Multiline = true,
+                    ScrollBars = ScrollBars.Both,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Consolas", 10f),
+                    WordWrap = false,
+                    Text = stringToShow,
+                    ReadOnly = true
+                };
+
+                // 4. Add controls to the form (order matters slightly for layout nesting)
+                previewForm.Controls.Add(txtPreview);
+                previewForm.Controls.Add(buttonPanel); // Docked to bottom, so TextBox fills the remaining space
+
+                previewForm.ShowDialog(this);
+            }
+        }
+
         public string ContentFromFile(string filename/*fullPath*/)
         {
             using (Stream ediFile = new FileStream(filename, FileMode.Open, FileAccess.Read))
@@ -1340,8 +1389,10 @@ namespace X12UtilsFRM
             ContextMenuStrip ownerMenu = (ContextMenuStrip)clickedItem.Owner;
             ListBox parentControl = ownerMenu.SourceControl as ListBox;
             string htmlContent = $@"<html><head><meta http-equiv=""X-UA-Compatible"" content=""IE=edge"" /></head><body><xmp>{ContentFromFile(parentControl.Text)}</xmp></body></html>";
-            DisplayHtml(htmlContent);
-            tabControl1.SelectedIndex = (int)enmTabPages.browser;
+           // DisplayHtml(htmlContent);
+
+            ShowFormWith(ContentFromFile(parentControl.Text));
+            //tabControl1.SelectedIndex = (int)enmTabPages.browser;
         }
 
         private void MenuDelete_Click(object sender, EventArgs e)
