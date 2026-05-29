@@ -867,7 +867,7 @@ namespace X12UtilsFRM
                 MessageBox.Show(ex.Message);
                 return;
             }
-            DisplayHtml(_checkedOption);
+            DisplayHtml(x);
             tabControl1.SelectedIndex = (int)enmTabPages.browser;
         }
 

@@ -42,7 +42,6 @@ namespace X12UtilsFRM {
             this.lbxTargetSchema = new System.Windows.Forms.ListBox();
             this.btnMap = new System.Windows.Forms.Button();
             this.btnFindSpec = new System.Windows.Forms.Button();
-            this.btnHippaParse = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.btnParse = new System.Windows.Forms.Button();
             this.lblInterchangeCount = new System.Windows.Forms.Label();
@@ -139,7 +138,6 @@ namespace X12UtilsFRM {
             this.splitContainer1.Panel1.Controls.Add(this.lbxTargetSchema);
             this.splitContainer1.Panel1.Controls.Add(this.btnMap);
             this.splitContainer1.Panel1.Controls.Add(this.btnFindSpec);
-            this.splitContainer1.Panel1.Controls.Add(this.btnHippaParse);
             this.splitContainer1.Panel1.Controls.Add(this.button1);
             this.splitContainer1.Panel1.Controls.Add(this.btnParse);
             this.splitContainer1.Panel1.Controls.Add(this.lblInterchangeCount);
@@ -249,7 +247,7 @@ namespace X12UtilsFRM {
             // btnMap
             // 
             this.btnMap.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnMap.Location = new System.Drawing.Point(8, 666);
+            this.btnMap.Location = new System.Drawing.Point(8, 628);
             this.btnMap.Margin = new System.Windows.Forms.Padding(2);
             this.btnMap.Name = "btnMap";
             this.btnMap.Size = new System.Drawing.Size(158, 34);
@@ -262,7 +260,7 @@ namespace X12UtilsFRM {
             // btnFindSpec
             // 
             this.btnFindSpec.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnFindSpec.Location = new System.Drawing.Point(8, 628);
+            this.btnFindSpec.Location = new System.Drawing.Point(8, 590);
             this.btnFindSpec.Margin = new System.Windows.Forms.Padding(2);
             this.btnFindSpec.Name = "btnFindSpec";
             this.btnFindSpec.Size = new System.Drawing.Size(158, 34);
@@ -271,19 +269,6 @@ namespace X12UtilsFRM {
             this.toolTip1.SetToolTip(this.btnFindSpec, "Adds Inbound X12 EDI files saved into $\"{Properties.Settings.Default.X12Flist}\" ");
             this.btnFindSpec.UseVisualStyleBackColor = true;
             this.btnFindSpec.Click += new System.EventHandler(this.btnFindSpec_Click);
-            // 
-            // btnHippaParse
-            // 
-            this.btnHippaParse.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnHippaParse.Location = new System.Drawing.Point(8, 590);
-            this.btnHippaParse.Margin = new System.Windows.Forms.Padding(2);
-            this.btnHippaParse.Name = "btnHippaParse";
-            this.btnHippaParse.Size = new System.Drawing.Size(158, 34);
-            this.btnHippaParse.TabIndex = 9;
-            this.btnHippaParse.Text = "Parse Hippa";
-            this.toolTip1.SetToolTip(this.btnHippaParse, "Adds Inbound X12 EDI files saved into $\"{Properties.Settings.Default.X12Flist}\" ");
-            this.btnHippaParse.UseVisualStyleBackColor = true;
-            this.btnHippaParse.Click += new System.EventHandler(this.btnHippaParse_Click);
             // 
             // button1
             // 
@@ -633,7 +618,6 @@ namespace X12UtilsFRM {
         private System.Windows.Forms.WebBrowser webBrowser1;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button btnFindSpec;
-        private System.Windows.Forms.Button btnHippaParse;
         private System.Windows.Forms.TabPage FormLocations;
         //private NLog.Windows.Forms.RichTextBoxTarget rtLog;
         private System.Windows.Forms.RichTextBox rtLog;
