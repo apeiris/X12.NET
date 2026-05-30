@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using SkiaSharp;
+using SkiaSharp.Views.Desktop; // Provides .ToSKColor() and conversion utilities
 
 namespace X12UtilsFRM
 {
@@ -9,6 +11,8 @@ namespace X12UtilsFRM
     {
         public string CategoryName { get; private set; }
         public bool IsExpanded { get; private set; } = false;
+        public Color ThemeColor { get; set; } = Color.Gray; // Populated during initialization
+        public string IconKey { get; set; } = "DefaultIcon"; // Populated during initialization
         public List<string> FunctoidTemplates { get; set; } = new List<string>();
 
         private Label lblHeader;
@@ -27,29 +31,70 @@ namespace X12UtilsFRM
             // 1. Category Header Label
             lblHeader = new Label
             {
-                Text = "► " + name,
+                Text = "", // Empty text because Skia will draw the text and icon manually via Paint
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                BackColor = Color.FromArgb(230, 235, 245),
-                ForeColor = Color.FromArgb(50, 50, 80),
+                BackColor = Color.FromArgb(240, 242, 245), // Neutral slate fallback background
                 Dock = DockStyle.Top,
                 Height = 26,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Cursor = Cursors.Hand,
-                Padding = new Padding(5, 0, 0, 0)
+                Cursor = Cursors.Hand
             };
             lblHeader.Click += Header_Click;
+
+            // Custom Skia Painting for unique colors and vector icons per category
+            lblHeader.Paint += (sender, e) =>
+            {
+                var info = new SKImageInfo(lblHeader.Width, lblHeader.Height);
+                using (var surface = SKSurface.Create(info))
+                {
+                    SKCanvas canvas = surface.Canvas;
+
+                    // Background base color for the category header item
+                    canvas.Clear(Color.FromArgb(240, 242, 245).ToSKColor());
+
+                    // Use the custom color specified for this specific category category
+                    SKColor accentColor = this.ThemeColor.ToSKColor();
+
+                    // 1. Draw the collapse/expand state arrow text manually
+                    string arrowIndicator = IsExpanded ? "▼" : "►";
+                    using (var arrowPaint = new SKPaint { Color = accentColor, IsAntialias = true })
+                    using (var arrowFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 8))
+                    {
+                        canvas.DrawText(arrowIndicator, 8, (lblHeader.Height / 2f) + 3.5f, arrowFont, arrowPaint);
+                    }
+
+                    // 2. Call the SkiaMapper function to draw the category vector icon
+                    SKPoint iconPosition = new SKPoint(25, lblHeader.Height / 2f);
+                    float iconSize = 11f;
+                    SkiaMapper.DrawToolboxIcon(canvas, iconPosition, iconSize, accentColor, this.IconKey);
+
+                    // 3. Draw the category name text right next to the vector icon
+                    using (var textPaint = new SKPaint { Color = Color.FromArgb(40, 40, 60).ToSKColor(), IsAntialias = true })
+                    using (var textFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 9.5f))
+                    {
+                        canvas.DrawText(CategoryName, 42, (lblHeader.Height / 2f) + 4f, textFont, textPaint);
+                    }
+
+                    canvas.Flush();
+                    using (var snapshot = surface.Snapshot())
+                    using (var bitmap = snapshot.ToBitmap())
+                    {
+                        e.Graphics.DrawImage(bitmap, 0, 0);
+                    }
+                }
+            };
+
             this.Controls.Add(lblHeader);
 
             // 2. Content Flow Panel for Functoids
             pnlContent = new FlowLayoutPanel
             {
                 Location = new Point(0, lblHeader.Height),
-                Width = this.Width, // Enforce strict fixed width tracking
+                Width = this.Width,
                 BackColor = Color.FromArgb(250, 250, 252),
                 Padding = new Padding(6, 4, 6, 4),
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                AutoSize = false, // CRITICAL FIX: Turn off AutoSize so it stops expanding horizontally!
+                AutoSize = false,
                 Visible = false
             };
 
@@ -74,37 +119,81 @@ namespace X12UtilsFRM
             }
             else
             {
-                // Force inner flow layout boundaries to match the parent category container perfectly
                 pnlContent.Width = this.Width;
-
-                // Force the layout engine to calculate wrapping rows based on the rigid fixed width bounds
                 pnlContent.PerformLayout();
 
-                // Ask the layout engine how much vertical space it needs for the wrapped grid rows
                 Size neededSize = pnlContent.GetPreferredSize(new Size(pnlContent.Width, 0));
-
-                // Apply the computed height constraints directly to both container layers
                 pnlContent.Height = neededSize.Height;
                 this.Height = lblHeader.Height + pnlContent.Height + 4;
             }
         }
+
+
+        private string GetFontSymbolForFunctoid(string name, string categoryKey)
+        {
+            // Exact name matching rule sets
+            string lowerName = name.ToLower();
+
+            if (lowerName.Contains("left")) return "◀";
+            if (lowerName.Contains("right")) return "▶";
+            if (lowerName.Contains("add") || lowerName.Contains("concatenate")) return "＋";
+            if (lowerName.Contains("subtract")) return "－";
+            if (lowerName.Contains("divide")) return "╱";
+            if (lowerName.Contains("multiply")) return "×";
+
+            // Category fallbacks if no exact string match is found
+            switch (categoryKey)
+            {
+                case "StringIcon":
+                    return "🔤"; // text/string symbol block
+                case "MathIcon":
+                    return "∑"; // Sigma/Math symbol
+                case "DateIcon":
+                    return "🕒"; // Clock/Time symbol
+                default:
+                    return "▪"; // Default small square node
+            }
+        }
+        
+        private void Header_Click(object sender, EventArgs e)
+        {
+            IsExpanded = !IsExpanded;
+            pnlContent.Visible = IsExpanded;
+
+            // Forces the custom label painting code to run again and flip the arrow visual directions
+            lblHeader.Invalidate();
+
+            UpdateHeight();
+            _onStateChanged?.Invoke();
+        }
+
+
         private Label CreateTemplateItem(string text)
         {
+            string symbol = GetFontSymbolForFunctoid(text, this.IconKey);
+            string fullDisplayText = $"{symbol} {text}";
+
             Label lbl = new Label
             {
-                Text = text,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
-                BackColor = Color.LightSteelBlue,
+                Text = fullDisplayText,
+                Font = new Font("Segoe UI", 8.25f, FontStyle.Regular),
+                BackColor = Color.FromArgb(245, 248, 252),
                 BorderStyle = BorderStyle.FixedSingle,
-                TextAlign = ContentAlignment.MiddleCenter,
-                // FIX B: Shrink item size from 92px down to 90px wide.
-                // (2 buttons * 90px) + margins + padding fits beautifully in a 210px container!
+                TextAlign = ContentAlignment.MiddleLeft,
                 Size = new Size(90, 28),
                 Margin = new Padding(3),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Padding = new Padding(4, 0, 0, 0)
             };
 
-            // Keep your smart drag-size tracking logic intact...
+            lbl.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(this.ThemeColor, 2))
+                {
+                    e.Graphics.DrawLine(pen, 0, 0, 0, lbl.Height);
+                }
+            };
+
             Point mouseDownLocation = Point.Empty;
             bool isPotentialDrag = false;
 
@@ -121,7 +210,17 @@ namespace X12UtilsFRM
                     if (deltaX >= SystemInformation.DragSize.Width || deltaY >= SystemInformation.DragSize.Height)
                     {
                         isPotentialDrag = false;
-                        TreeNode dragSnapshot = new TreeNode(text) { Tag = "FUNCTOID_TEMPLATE" };
+
+                        // CRITICAL FIX: Package the symbol text AND the exact ThemeColor structure 
+                        TreeNode dragSnapshot = new TreeNode(fullDisplayText)
+                        {
+                            Tag = new FunctoidDragData
+                            {
+                                OriginalName = text,
+                                CategoryColor = this.ThemeColor
+                            }
+                        };
+
                         this.DoDragDrop(dragSnapshot, DragDropEffects.Copy | DragDropEffects.Link);
                     }
                 }
@@ -131,16 +230,13 @@ namespace X12UtilsFRM
             return lbl;
         }
 
-        private void Header_Click(object sender, EventArgs e)
+        // Small payload class to ship multiple properties safely across the drag pipeline
+        public class FunctoidDragData
         {
-            IsExpanded = !IsExpanded;
-            lblHeader.Text = (IsExpanded ? "▼ " : "► ") + CategoryName;
-            pnlContent.Visible = IsExpanded;
-
-            UpdateHeight();
-            _onStateChanged?.Invoke();
+            public string OriginalName { get; set; }
+            public Color CategoryColor { get; set; }
         }
+
+
     }
 }
-
-    

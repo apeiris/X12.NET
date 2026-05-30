@@ -583,7 +583,8 @@ namespace X12UtilsFRM
             if (value > max) return max;
             return value;
         }
-        public static void DrawToolboxIcon(SKCanvas canvas, SKPoint position, float size, SKColor color)
+
+        public static void DrawToolboxIcon(SKCanvas canvas, SKPoint position, float size, SKColor color, string iconKey)
         {
             using (var paint = new SKPaint())
             {
@@ -594,35 +595,80 @@ namespace X12UtilsFRM
                 paint.StrokeCap = SKStrokeCap.Round;
                 paint.StrokeJoin = SKStrokeJoin.Round;
 
-                // 1. Draw main toolbox body container box
-                float boxWidth = size;
-                float boxHeight = size * 0.7f;
-                var bodyRect = new SKRect(
-                    position.X - boxWidth / 2f,
-                    position.Y - boxHeight / 2f + (size * 0.1f),
-                    position.X + boxWidth / 2f,
-                    position.Y + boxHeight / 2f + (size * 0.1f)
-                );
-                canvas.DrawRoundRect(bodyRect, size * 0.1f, size * 0.1f, paint);
-
-                // 2. Draw top handle attachment loop
-                using (var handlePath = new SKPath())
+                switch (iconKey)
                 {
-                    handlePath.MoveTo(position.X - size * 0.25f, bodyRect.Top);
-                    handlePath.LineTo(position.X - size * 0.25f, bodyRect.Top - size * 0.2f);
-                    handlePath.LineTo(position.X + size * 0.25f, bodyRect.Top - size * 0.2f);
-                    handlePath.LineTo(position.X + size * 0.25f, bodyRect.Top);
-                    canvas.DrawPath(handlePath, paint);
-                }
+                    case "StringIcon":
+                        // --- DRAW STRING / TEXT ICON (Two stylized text quotes or matching brackets: "") ---
+                        float quoteOffset = size * 0.25f;
+                        // Left quote block marker
+                        canvas.DrawLine(position.X - quoteOffset, position.Y - (size * 0.2f), position.X - quoteOffset, position.Y + (size * 0.2f), paint);
+                        canvas.DrawLine(position.X - quoteOffset, position.Y - (size * 0.2f), position.X - (quoteOffset - size * 0.15f), position.Y - (size * 0.2f), paint);
 
-                // 3. Draw central latch point accent line
-                canvas.DrawLine(
-                    position.X,
-                    bodyRect.Top,
-                    position.X,
-                    bodyRect.Top + (boxHeight * 0.3f),
-                    paint
-                );
+                        // Right quote block marker
+                        canvas.DrawLine(position.X + quoteOffset, position.Y - (size * 0.2f), position.X + quoteOffset, position.Y + (size * 0.2f), paint);
+                        canvas.DrawLine(position.X + quoteOffset, position.Y + (size * 0.2f), position.X + (quoteOffset - size * 0.15f), position.Y + (size * 0.2f), paint);
+                        break;
+
+                    case "MathIcon":
+                        // --- DRAW MATH TOOL ICON (A stylized crisp Plus '+' and minus/equal track sign) ---
+                        float mathLen = size * 0.3f;
+                        // Horizontal cross line
+                        canvas.DrawLine(position.X - mathLen, position.Y - (size * 0.1f), position.X + mathLen, position.Y - (size * 0.1f), paint);
+                        // Vertical cross line
+                        canvas.DrawLine(position.X, position.Y - (size * 0.1f) - mathLen, position.X, position.Y - (size * 0.1f) + mathLen, paint);
+
+                        // Minus tracking underline underneath
+                        canvas.DrawLine(position.X - mathLen, position.Y + (size * 0.3f), position.X + mathLen, position.Y + (size * 0.3f), paint);
+                        break;
+
+                    case "DateIcon":
+                        // --- DRAW DATE / TIME ICON (A clean miniature calendar bounding grid) ---
+                        float calSize = size * 0.4f;
+                        var calRect = new SKRect(position.X - calSize, position.Y - calSize + (size * 0.1f), position.X + calSize, position.Y + calSize + (size * 0.1f));
+                        canvas.DrawRoundRect(calRect, size * 0.05f, size * 0.05f, paint);
+
+                        // Top header binder horizontal separation bar
+                        float headerY = calRect.Top + (calRect.Height * 0.3f);
+                        canvas.DrawLine(calRect.Left, headerY, calRect.Right, headerY, paint);
+
+                        // Small inner dots simulating calendar day grid entries
+                        paint.Style = SKPaintStyle.Fill;
+                        canvas.DrawCircle(position.X - (calSize * 0.4f), headerY + (calSize * 0.4f), size * 0.06f, paint);
+                        canvas.DrawCircle(position.X + (calSize * 0.4f), headerY + (calSize * 0.4f), size * 0.06f, paint);
+                        break;
+
+                    default:
+                        // --- ORIGINAL FALLBACK: Main Toolbox Body Container Box ---
+                        float boxWidth = size;
+                        float boxHeight = size * 0.7f;
+                        var bodyRect = new SKRect(
+                            position.X - boxWidth / 2f,
+                            position.Y - boxHeight / 2f + (size * 0.1f),
+                            position.X + boxWidth / 2f,
+                            position.Y + boxHeight / 2f + (size * 0.1f)
+                        );
+                        canvas.DrawRoundRect(bodyRect, size * 0.1f, size * 0.1f, paint);
+
+                        // 2. Draw top handle attachment loop
+                        using (var handlePath = new SKPath())
+                        {
+                            handlePath.MoveTo(position.X - size * 0.25f, bodyRect.Top);
+                            handlePath.LineTo(position.X - size * 0.25f, bodyRect.Top - size * 0.2f);
+                            handlePath.LineTo(position.X + size * 0.25f, bodyRect.Top - size * 0.2f);
+                            handlePath.LineTo(position.X + size * 0.25f, bodyRect.Top);
+                            canvas.DrawPath(handlePath, paint);
+                        }
+
+                        // 3. Draw central latch point accent line
+                        canvas.DrawLine(
+                            position.X,
+                            bodyRect.Top,
+                            position.X,
+                            bodyRect.Top + (boxHeight * 0.3f),
+                            paint
+                        );
+                        break;
+                }
             }
         }
         public void ClearAllConnections()

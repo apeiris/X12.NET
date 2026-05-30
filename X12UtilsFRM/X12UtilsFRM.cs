@@ -105,6 +105,214 @@ namespace X12UtilsFRM
             Trace.Flush();
         }
         #region Toolbox Implementation
+
+        private void InitializeToolbox()
+        {
+            _originalFloatingHeight = pnlFunctoids.Height - 40;
+
+            // Create the main workspace panel frame block
+            pnlToolboxWrapper = new Panel
+            {
+                Width = ToolboxWidth + 20,
+                Height = _originalFloatingHeight,
+                Location = new Point(pnlFunctoids.Width - (ToolboxWidth + 40), 20),
+                BackColor = Color.FromArgb(245, 246, 248), // Cleaner neutral background
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            pnlFunctoids.Controls.Add(pnlToolboxWrapper);
+            pnlToolboxWrapper.BringToFront();
+
+            // 1. The "Functoids" Top Header Title Strip
+            Panel pnlHeaderBar = new Panel
+            {
+                Height = 25,
+                Dock = DockStyle.Top,
+                BackColor = Color.FromArgb(45, 50, 65) // Dark slate header for high-contrast professional look
+            };
+            pnlToolboxWrapper.Controls.Add(pnlHeaderBar);
+
+            // 2. The Vertical Toggle Button placed directly onto the right side of the HeaderBar
+            #region vertical toggle button 
+            btnToolboxVerticalToggle = new Button
+            {
+                Text = "▲",
+                Font = new Font("Segoe UI", 7, FontStyle.Bold),
+                Size = new Size(22, 21),
+                Location = new Point(pnlToolboxWrapper.Width - 26, 2),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(65, 70, 90),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnToolboxVerticalToggle.FlatAppearance.BorderSize = 0;
+            btnToolboxVerticalToggle.Click += ToggleToolboxVertical_Click;
+            pnlHeaderBar.Controls.Add(btnToolboxVerticalToggle);
+            #endregion vertical toggle button
+
+            pnlHeaderBar.Paint += (sender, e) =>  // Handle title text and icon drawing manually via GDI+ to Skia bridging
+            {
+                var info = new SKImageInfo(pnlHeaderBar.Width, pnlHeaderBar.Height);
+                using (var surface = SKSurface.Create(info))
+                {
+                    SKCanvas canvas = surface.Canvas;
+                    canvas.Clear(Color.FromArgb(45, 50, 65).ToSKColor());
+
+                    // Core Toolbox header defaults to a neutral crisp accent color
+                    SKPoint iconPosition = new SKPoint(15, pnlHeaderBar.Height / 2f);
+                    float iconSize = 12f;
+                    SKColor textAndIconColor = Color.FromArgb(230, 235, 245).ToSKColor();
+
+                    // Draws default toolbox master icon
+                    SkiaMapper.DrawToolboxIcon(canvas, iconPosition, iconSize, textAndIconColor, "MainToolbox");
+
+                    // Draw the "Functoids" text next to the icon manually
+                    using (var textPaint = new SKPaint { Color = textAndIconColor, IsAntialias = true })
+                    using (var textFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 10))
+                    {
+                        canvas.DrawText("Functoids & Tools", 28, (pnlHeaderBar.Height / 2f) + 4f, textFont, textPaint);
+                    }
+
+                    canvas.Flush();
+                    using (var snapshot = surface.Snapshot())
+                    using (var bitmap = snapshot.ToBitmap())
+                    {
+                        e.Graphics.DrawImage(bitmap, 0, 0);
+                    }
+                }
+            };
+
+            // bottom tool bar with action buttons
+            int buttonWidth = (ToolboxWidth - 10) / 2;
+            int buttonHeight = 30;
+
+            Panel pnlCanvasToolsBottomBar = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 100,
+                BackColor = Color.FromArgb(235, 238, 245),
+                Padding = new Padding(10, 6, 10, 6),
+                BorderStyle = BorderStyle.None
+            };
+            pnlCanvasToolsBottomBar.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(200, 210, 225), 1))
+                {
+                    e.Graphics.DrawLine(pen, 0, 0, pnlCanvasToolsBottomBar.Width, 0);
+                }
+            };
+
+            Button btnClearCanvas = new Button
+            {
+                Text = "Clear Canvas",
+                Size = new Size(buttonWidth, buttonHeight),
+                Location = new Point(10, 6),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(215, 222, 235),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnClearCanvas.Click += btnClearCanvas_Click;
+
+            Button btnSave = new Button
+            {
+                Text = "Save",
+                Size = new Size(buttonWidth, buttonHeight),
+                Location = new Point(15 + buttonWidth, 6),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(215, 222, 235),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnSave.Click += btnSaveCanvas_Click;
+
+            Button btnTransform = new Button
+            {
+                Text = "Transform",
+                Size = new Size(buttonWidth, 32),
+                Location = new Point(10, 10 + buttonHeight),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(195, 210, 240), // Slightly accented action color
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnTransform.Click += btnGenerateXsltFromCanvas_Click;
+
+            Button btnLoadCanvas = new Button
+            {
+                Text = "Load Canvas",
+                Size = new Size(buttonWidth, buttonHeight),
+                Location = new Point(15 + buttonWidth, 10 + buttonHeight),
+                FlatStyle = FlatStyle.Popup,
+                BackColor = Color.FromArgb(215, 222, 235),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnLoadCanvas.Click += btnLoadCanvas_Click;
+
+            pnlCanvasToolsBottomBar.Controls.Add(btnClearCanvas);
+            pnlCanvasToolsBottomBar.Controls.Add(btnTransform);
+            pnlCanvasToolsBottomBar.Controls.Add(btnSave);
+            pnlCanvasToolsBottomBar.Controls.Add(btnLoadCanvas);
+            pnlToolboxWrapper.Controls.Add(pnlCanvasToolsBottomBar);
+
+            // 4. Create the main categories scroll container view (Fills remaining space)
+
+            // 4. Create the main categories scroll container view (Fills remaining space)
+            pnlToolboxCategoriesContainer = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+
+                // FIX: Adjust Padding to push the contents down past the 25px height of the header bar
+                Margin = new Padding(0),
+                Padding = new Padding(10, 28, 10, 10) // Changed top padding from 10 to 28
+            };
+
+            pnlToolboxWrapper.Controls.Add(pnlToolboxCategoriesContainer);
+
+            pnlToolboxCategoriesContainer.SendToBack();
+            pnlCanvasToolsBottomBar.BringToFront();
+            pnlHeaderBar.BringToFront();
+
+            AttachToolboxDragEvents(pnlHeaderBar);
+
+            var stringTools = new List<string> { "Concatenate", "String Left", "String Right", "Trim", "Uppercase", "Lowercase" };
+            var mathTools = new List<string> { "Add", "Subtract", "Multiply", "Divide", "Modulus", "Absolute" };
+            var dateTools = new List<string> { "Current Date", "Date Format", "Add Days", "Date Diff" };
+
+            Action triggerLayoutUpdate = () => { RenderToolboxLayout(); };
+
+            // Re-populating categories with distinct thematic colors and icon mappings
+            toolboxCategories.Clear();
+
+            // String Functoids: Deep Corporate Blue with "String" or "Text" vector type
+            toolboxCategories.Add(new ToolboxCategory("String Functoids", stringTools, triggerLayoutUpdate)
+            {
+                ThemeColor = Color.FromArgb(40, 115, 185),
+                IconKey = "StringIcon"
+            });
+
+            // Mathematical Tools: Dark Emerald Olive with "Math" or "Sigma/Fx" vector type
+            toolboxCategories.Add(new ToolboxCategory("Mathematical Tools", mathTools, triggerLayoutUpdate)
+            {
+                ThemeColor = Color.FromArgb(35, 140, 95),
+                IconKey = "MathIcon"
+            });
+
+            // Date / Time Utilities: Warm Terracotta/Orange with "Clock/Calendar" vector type
+            toolboxCategories.Add(new ToolboxCategory("Date / Time Utilities", dateTools, triggerLayoutUpdate)
+            {
+                ThemeColor = Color.FromArgb(195, 85, 35),
+                IconKey = "DateIcon"
+            });
+
+            RenderToolboxLayout();
+        }
+
         private dynamic FindNodeByXPath(IEnumerable<dynamic> schemaRegistry, string xpath)
         {
             var generator = new XsltMapGenerator(_mapper);
@@ -123,200 +331,7 @@ namespace X12UtilsFRM
             }
             return null;
         }
-        private void InitializeToolbox()
-        {
-            _originalFloatingHeight = pnlFunctoids.Height - 40;
 
-            // Create the main workspace panel frame block
-            pnlToolboxWrapper = new Panel
-            {
-                Width = ToolboxWidth + 20,
-                Height = _originalFloatingHeight,
-                Location = new Point(pnlFunctoids.Width - (ToolboxWidth + 40), 20),
-                BackColor = Color.FromArgb(235, 240, 250),
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            pnlFunctoids.Controls.Add(pnlToolboxWrapper);
-            pnlToolboxWrapper.BringToFront();
-
-            // 1. The "Functoids" Top Header Title Strip
-            Panel pnlHeaderBar = new Panel
-            {
-                Height = 25,
-                Dock = DockStyle.Top,
-                BackColor = Color.FromArgb(220, 225, 235)
-            };
-            pnlToolboxWrapper.Controls.Add(pnlHeaderBar);
-
-            // 2. The Vertical Toggle Button placed directly onto the right side of the HeaderBar
-            #region vertical toggle button 
-            btnToolboxVerticalToggle = new Button
-            {
-                Text = "▲",
-                Font = new Font("Segoe UI", 7, FontStyle.Bold),
-                Size = new Size(22, 21),
-                // Position it on the far right of the header bar with a small 2px padding offset
-                Location = new Point(pnlToolboxWrapper.Width - 26, 2),
-                FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(195, 200, 215),
-                ForeColor = Color.FromArgb(50, 50, 80),
-                Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnToolboxVerticalToggle.FlatAppearance.BorderSize = 0;
-            btnToolboxVerticalToggle.Click += ToggleToolboxVertical_Click;
-            pnlHeaderBar.Controls.Add(btnToolboxVerticalToggle);
-            #endregion vertical toggle button
-
-            pnlHeaderBar.Paint += (sender, e) =>  // Handle title text and icon drawing manually via GDI+ to Skia bridging
-            {
-                var info = new SKImageInfo(pnlHeaderBar.Width, pnlHeaderBar.Height);
-                using (var surface = SKSurface.Create(info))
-                {
-                    SKCanvas canvas = surface.Canvas;
-                    canvas.Clear(Color.FromArgb(220, 225, 235).ToSKColor());
-
-                    // Define position parameters for our custom vector icon
-                    SKPoint iconPosition = new SKPoint(15, pnlHeaderBar.Height / 2f);
-                    float iconSize = 12f;
-                    SKColor iconColor = Color.Red.ToSKColor();
-
-                    // Call the vector method we placed in SkiaMapper
-                    SkiaMapper.DrawToolboxIcon(canvas, iconPosition, iconSize, iconColor);
-
-                    // Draw the "Functoids" text next to the icon manually
-                    using (var textPaint = new SKPaint { Color = iconColor, IsAntialias = true })
-                    using (var textFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 12))
-                    {
-                        canvas.DrawText("Functoids & Tools", 28, (pnlHeaderBar.Height / 2f) + 4.5f, textFont, textPaint);
-                    }
-
-                    canvas.Flush();
-                    using (var snapshot = surface.Snapshot())
-                    using (var bitmap = snapshot.ToBitmap())
-                    {
-                        e.Graphics.DrawImage(bitmap, 0, 0);
-                    }
-                }
-            };
-            // bottom tool bar with action buttons
-            int bButtonRows = 2; // bottom button rows
-            int buttonWidth = (ToolboxWidth - 10) / 2;
-            int buttonHeight = 30;
-
-            Panel pnlCanvasToolsBottomBar = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 100,
-                BackColor = Color.FromArgb(225, 230, 245),
-                Padding = new Padding(10, 6, 10, 6),
-                BorderStyle = BorderStyle.None
-            };
-            pnlCanvasToolsBottomBar.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(Color.FromArgb(190, 200, 220), 1))
-                {
-                    e.Graphics.DrawLine(pen, 0, 0, pnlCanvasToolsBottomBar.Width, 0);
-                }
-            };
-
-            Button btnClearCanvas = new Button
-            {
-                Text = "Clear Canvas",
-                Size = new Size(buttonWidth, buttonHeight),
-                Location = new Point(10, 6),
-                FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(210, 220, 240),
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Cursor = Cursors.Hand
-            };
-            btnClearCanvas.Click += btnClearCanvas_Click;
-
-            Button btnSave = new Button
-            {
-                Text = "Save",
-                Size = new Size(buttonWidth, buttonHeight),
-                Location = new Point(15 + buttonWidth, 6),
-                FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(210, 220, 240),
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Cursor = Cursors.Hand
-            };
-            btnSave.Click += btnSaveCanvas_Click;
-
-
-            Button btnTransform = new Button
-            {
-                Text = "Transform",
-                Size = new Size(buttonWidth, 32),
-                Location = new Point(10, 10 + (buttonHeight)),
-                FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(210, 220, 240),
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Cursor = Cursors.Hand
-            };
-            btnTransform.Click += btnGenerateXsltFromCanvas_Click;
-
-            Button btnLoadCanvas = new Button
-            {
-                Text = "Load Canvas",
-                Size = new Size(buttonWidth, buttonHeight),
-                Location = new Point(15 + buttonWidth, 10 + buttonHeight),
-                FlatStyle = FlatStyle.Popup,
-                BackColor = Color.FromArgb(210, 220, 240),
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Cursor = Cursors.Hand
-            };
-            btnLoadCanvas.Click += btnLoadCanvas_Click;
-
-
-
-
-
-
-
-            pnlCanvasToolsBottomBar.Controls.Add(btnClearCanvas);
-            pnlCanvasToolsBottomBar.Controls.Add(btnTransform);
-            pnlCanvasToolsBottomBar.Controls.Add(btnSave);
-            pnlCanvasToolsBottomBar.Controls.Add(btnLoadCanvas);
-            pnlToolboxWrapper.Controls.Add(pnlCanvasToolsBottomBar);
-
-            // 4. Create the main categories scroll container view (Fills remaining space)
-            pnlToolboxCategoriesContainer = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoScroll = true,
-                Margin = new Padding(0, 5, 0, 0),
-                Padding = new Padding(10, 18, 18, 10)
-            };
-            pnlToolboxWrapper.Controls.Add(pnlToolboxCategoriesContainer);
-
-            // Ensure all components maintain correct Z-order layering inside the wrapper frame
-            // To prevent layout overlap during minimization, the Fill container must live at the 
-            // bottom of the Z-order stack so Top/Bottom docked components overlay cleanly on top of it.
-            pnlToolboxCategoriesContainer.SendToBack();
-            pnlCanvasToolsBottomBar.BringToFront();
-            pnlHeaderBar.BringToFront();
-
-            // Tie movement drag actions onto the header bar background layer
-            AttachToolboxDragEvents(pnlHeaderBar);
-
-            var stringTools = new List<string> { "Concatenate", "String Left", "String Right", "Trim", "Uppercase", "Lowercase" };
-            var mathTools = new List<string> { "Add", "Subtract", "Multiply", "Divide", "Modulus", "Absolute" };
-            var dateTools = new List<string> { "Current Date", "Date Format", "Add Days", "Date Diff" };
-
-            Action triggerLayoutUpdate = () => { RenderToolboxLayout(); };
-
-            toolboxCategories.Clear();
-            toolboxCategories.Add(new ToolboxCategory("String Functoids", stringTools, triggerLayoutUpdate));
-            toolboxCategories.Add(new ToolboxCategory("Mathematical Tools", mathTools, triggerLayoutUpdate));
-            toolboxCategories.Add(new ToolboxCategory("Date / Time Utilities", dateTools, triggerLayoutUpdate));
-
-            RenderToolboxLayout();
-        }
         private void ToggleToolboxVertical_Click(object sender, EventArgs e)
         {
             // If the palette is fully collapsed horizontally, ignore vertical commands
@@ -442,11 +457,21 @@ namespace X12UtilsFRM
             if (pnlToolboxCategoriesContainer == null) return;
             pnlToolboxCategoriesContainer.SuspendLayout();
             pnlToolboxCategoriesContainer.Controls.Clear();
+
             foreach (var category in toolboxCategories)
             {
                 category.Width = 205;
                 category.UpdateHeight();
                 category.Margin = new Padding(6, 0, 0, 6);
+
+                // Update the physical WinForms properties of the control using the Category's theme
+                category.BackColor = Color.White;
+                category.ForeColor = category.ThemeColor; // Sets the text color strategy
+
+                // If your ToolboxCategory class exposes a public label or header panel, 
+                // you can color it directly here, like this:
+                // category.HeaderBackColor = category.ThemeColor;
+
                 pnlToolboxCategoriesContainer.Controls.Add(category);
             }
             pnlToolboxCategoriesContainer.ResumeLayout(true);
@@ -882,10 +907,19 @@ namespace X12UtilsFRM
                 TreeNode sourceNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
                 if (sourceNode != null)
                 {
-                    // If dragging an abstract template item from the toolbox, spawn a new functoid control
-                    if (sourceNode.Tag as string == "FUNCTOID_TEMPLATE")
+                    // REVISED: Extract our rich layout payload object instead of a flat string
+                    if (sourceNode.Tag is ToolboxCategory.FunctoidDragData dragData)
                     {
+                        // Create the functoid passing along the full display name (with the icon) 
+                        // and the distinct category theme color
                         Control customFunctoidBlock = CreateFunctoid(sourceNode.Text, clientPoint);
+
+                        // Set the background color of your generated UI block control
+                        customFunctoidBlock.BackColor = dragData.CategoryColor;
+
+                        // Optional: If you want the text color of the block to be highly readable on dark backgrounds
+                        customFunctoidBlock.ForeColor = Color.FromArgb(40, 40, 40);
+
                         pnlFunctoids.Controls.Add(customFunctoidBlock);
                         customFunctoidBlock.BringToFront();
                         _mapper.Invalidate();
