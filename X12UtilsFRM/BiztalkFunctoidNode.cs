@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -6,111 +7,119 @@ namespace X12UtilsFRM
 {
     public class BizTalkFunctoidNode : Panel
     {
-        public string CustomScript { get; set; }
-        public string FunctoidName { get; private set; }
+        public string CustomScript { get; set; } = string.Empty;
+        public string FunctoidName { get; set; }
         public string FunctoidCategory { get; private set; }
+
+        // Track variable parameters/arguments mapped as inputs to this script functoid
+        public List<object> InputConnections { get; set; } = new List<object>();
 
         public Label LblIcon { get; private set; }
         public Label LblText { get; private set; }
+        private ContextMenuStrip _contextMenu;
 
-        // Core tracking variables for drawing cascading links between functoids
         private Point mouseStartLoc = Point.Empty;
         private bool trackingForLineConnection = false;
 
         public BizTalkFunctoidNode(string text, Point location)
         {
             this.FunctoidName = text;
-            this.FunctoidCategory = DetermineCategory(text);
+            this.FunctoidCategory = "Scripting";
 
-            // Configure the outer BizTalk block capsule size
-            this.Size = new Size(130, 36);
+            this.Size = new Size(140, 40);
             this.Location = location;
             this.BorderStyle = BorderStyle.FixedSingle;
             this.Cursor = Cursors.SizeAll;
 
-            // Determine specific color schemes and symbols based on BizTalk categories
-            Color headerColor;
-            Color bodyColor;
-            string iconSymbol;
-
-            switch (this.FunctoidCategory)
-            {
-                case "String":
-                    headerColor = Color.FromArgb(0, 122, 204);   // BizTalk Blue
-                    bodyColor = Color.FromArgb(235, 245, 255);
-                    iconSymbol = "ℱ"; // Math function script symbol
-                    break;
-                case "Math":
-                    headerColor = Color.FromArgb(220, 100, 0);   // BizTalk Orange/Amber
-                    bodyColor = Color.FromArgb(255, 242, 230);
-                    iconSymbol = "∑"; // Sigma summation symbol
-                    break;
-                case "Date":
-                    headerColor = Color.FromArgb(16, 124, 65);   // BizTalk Green
-                    bodyColor = Color.FromArgb(230, 247, 236);
-                    iconSymbol = "📅"; // Calendar block emoji/glyph
-                    break;
-                default:
-                    headerColor = Color.FromArgb(100, 100, 100); // Standard Gray
-                    bodyColor = Color.FromArgb(240, 240, 240);
-                    iconSymbol = "⚙";
-                    break;
-            }
+            // BizTalk Scripting Functoid Styling Look & Feel
+            Color headerColor = Color.FromArgb(212, 115, 0); // Ochre / Orange scripting look
+            Color bodyColor = Color.FromArgb(255, 244, 230);
 
             this.BackColor = bodyColor;
 
-            // 1. Left Icon Anchor Bar Block
+            // Icon Element
             LblIcon = new Label
             {
-                Text = iconSymbol,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                BackColor = headerColor,
-                ForeColor = Color.White,
-                Size = new Size(30, this.Height - 2),
-                Location = new Point(0, 0),
+                Text = "📜",
+                Font = new Font("Segoe UI", 11F, FontStyle.Regular),
+                Location = new Point(4, 8),
+                Size = new Size(24, 24),
                 TextAlign = ContentAlignment.MiddleCenter,
-                Cursor = Cursors.SizeAll
+                BackColor = Color.Transparent
             };
-            this.Controls.Add(LblIcon);
 
-            // 2. Right Text Label Description Strip
+            // Main Label Element
             LblText = new Label
             {
-                Text = text,
-                Font = new Font("Segoe UI", 8.25f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(30, 30, 30),
-                Size = new Size(95, this.Height - 2),
-                Location = new Point(32, 0),
+                Text = this.FunctoidName,
+                Font = new Font("Segoe UI", 8.25F, FontStyle.Bold),
+                Location = new Point(30, 4),
+                Size = new Size(105, 30),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Cursor = Cursors.SizeAll
+                BackColor = Color.Transparent
             };
+
+            this.Controls.Add(LblIcon);
             this.Controls.Add(LblText);
 
-            // Seed initial execution script snippet properties
-            this.CustomScript = FunctoidXsltCompiler.GetXsltSnippet(text, "SOURCE_XPATH_PLACEHOLDER", text.Replace(" ", "_"));
-
-            // 3. Register Drag Line Intercept Listeners contextually across all component layout areas
+            // Hook Drag Event Triggers
             AttachLineDragHooks(this);
             AttachLineDragHooks(LblIcon);
             AttachLineDragHooks(LblText);
+
+            // Build Right-Click Configuration Context Menu
+            InitializeContextMenu();
         }
 
-        private string DetermineCategory(string functoidName)
+        private void InitializeContextMenu()
         {
-            string name = functoidName.ToLower();
-            if (name.Contains("string") || name.Contains("concat") || name.Contains("trim") || name.Contains("case"))
-                return "String";
-            if (name.Contains("add") || name.Contains("sub") || name.Contains("multiply") || name.Contains("divide") || name.Contains("mod") || name.Contains("abs"))
-                return "Math";
-            if (name.Contains("date") || name.Contains("time") || name.Contains("diff"))
-                return "Date";
+            _contextMenu = new ContextMenuStrip();
+            var editScriptItem = new ToolStripMenuItem("Configure Script Properties...", null, OnEditScriptClicked);
+            var deleteItem = new ToolStripMenuItem("Delete Functoid", null, OnDeleteClicked);
 
-            return "Custom";
+            _contextMenu.Items.Add(editScriptItem);
+            _contextMenu.Items.Add(new ToolStripSeparator());
+            _contextMenu.Items.Add(deleteItem);
+
+            this.ContextMenuStrip = _contextMenu;
+            LblText.ContextMenuStrip = _contextMenu;
+            LblIcon.ContextMenuStrip = _contextMenu;
         }
 
-        /// <summary>
-        /// Binds connection dragging hooks recursively so users can Shift+Drag from anywhere on the control.
-        /// </summary>
+        private void OnEditScriptClicked(object sender, EventArgs e)
+        {
+            using (var editor = new FunctoidScriptEditorForm(this.FunctoidName, this.CustomScript))
+            {
+                if (editor.ShowDialog() == DialogResult.OK)
+                {
+                    this.CustomScript = editor.CompiledScriptText;
+                    if (this.CustomScript.Contains("Function "))
+                    {
+                        // Dynamically update label display name if defined explicitly in expression
+                        int funcIdx = this.CustomScript.IndexOf("Function ");
+                        int openParen = this.CustomScript.IndexOf("(", funcIdx);
+                        if (funcIdx >= 0 && openParen > funcIdx)
+                        {
+                            string parsedName = this.CustomScript.Substring(funcIdx + 9, openParen - (funcIdx + 9)).Trim();
+                            this.FunctoidName = parsedName;
+                            this.LblText.Text = parsedName;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void OnDeleteClicked(object sender, EventArgs e)
+        {
+            // Remove control gracefully from workspace UI parent containers
+            var parent = this.Parent;
+            if (parent != null)
+            {
+                parent.Controls.Remove(this);
+                this.Dispose();
+            }
+        }
+
         private void AttachLineDragHooks(Control control)
         {
             control.MouseDown += (s, e) =>
@@ -129,12 +138,9 @@ namespace X12UtilsFRM
                     int dx = Math.Abs(e.X - mouseStartLoc.X);
                     int dy = Math.Abs(e.Y - mouseStartLoc.Y);
 
-                    // Once the mouse slips past system drag sensitivity variables, trip the mapper drop engine
                     if (dx >= SystemInformation.DragSize.Width || dy >= SystemInformation.DragSize.Height)
                     {
                         trackingForLineConnection = false;
-
-                        // Pass THIS entire instance as the underlying link source node reference payload
                         this.DoDragDrop(this, DragDropEffects.Link);
                     }
                 }

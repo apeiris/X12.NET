@@ -105,6 +105,24 @@ namespace X12UtilsFRM
             Trace.Flush();
         }
         #region Toolbox Implementation
+        private dynamic FindNodeByXPath(IEnumerable<dynamic> schemaRegistry, string xpath)
+        {
+            var generator = new XsltMapGenerator(_mapper);
+            foreach (var nodeItem in schemaRegistry)
+            {
+                XmlNode xmlNode = nodeItem is XmlNode node ? node : nodeItem.XmlSourceNode;
+                if (xmlNode != null)
+                {
+                    // Internal path matching wrapper
+                    string computedPath = generator.GetNodePathForLookup(xmlNode);
+                    if (computedPath == xpath)
+                    {
+                        return nodeItem;
+                    }
+                }
+            }
+            return null;
+        }
         private void InitializeToolbox()
         {
             _originalFloatingHeight = pnlFunctoids.Height - 40;
@@ -202,7 +220,8 @@ namespace X12UtilsFRM
                 }
             };
 
-            Button btnClearCanvas = new Button  {
+            Button btnClearCanvas = new Button
+            {
                 Text = "Clear Canvas",
                 Size = new Size(buttonWidth, buttonHeight),
                 Location = new Point(10, 6),
@@ -213,7 +232,8 @@ namespace X12UtilsFRM
             };
             btnClearCanvas.Click += btnClearCanvas_Click;
 
-            Button btnSave = new Button  {
+            Button btnSave = new Button
+            {
                 Text = "Save",
                 Size = new Size(buttonWidth, buttonHeight),
                 Location = new Point(15 + buttonWidth, 6),
@@ -225,7 +245,8 @@ namespace X12UtilsFRM
             btnSave.Click += btnSaveCanvas_Click;
 
 
-            Button btnTransform = new Button  {
+            Button btnTransform = new Button
+            {
                 Text = "Transform",
                 Size = new Size(buttonWidth, 32),
                 Location = new Point(10, 10 + (buttonHeight)),
@@ -236,7 +257,8 @@ namespace X12UtilsFRM
             };
             btnTransform.Click += btnGenerateXsltFromCanvas_Click;
 
-            Button btnLoadCanvas = new Button      {
+            Button btnLoadCanvas = new Button
+            {
                 Text = "Load Canvas",
                 Size = new Size(buttonWidth, buttonHeight),
                 Location = new Point(15 + buttonWidth, 10 + buttonHeight),
@@ -247,7 +269,7 @@ namespace X12UtilsFRM
             };
             btnLoadCanvas.Click += btnLoadCanvas_Click;
 
-        
+
 
 
 
@@ -343,139 +365,10 @@ namespace X12UtilsFRM
             _mapper.Invalidate();
         }
 
-        private void btnClearCanvas_Click(object sender, EventArgs e)
-        {
-            DialogResult result = MessageBox.Show(
-                 "Are you sure you want to clear the entire canvas? This will delete all functoids and connection wires.",
-                 "Clear Canvas",
-                 MessageBoxButtons.YesNo,
-                 MessageBoxIcon.Warning
-             );
-
-            if (result == DialogResult.Yes)
-            {
-                // 2. Erase the connection data collection lines
-                _mapper.ClearAllConnections();
-
-                // 3. Scan the UI collection and purge temporary Functoid controls safely
-                // Loop backwards to safely delete controls while modifying the collection
-                for (int i = pnlFunctoids.Controls.Count - 1; i >= 0; i--)
-                {
-                    Control ctrl = pnlFunctoids.Controls[i];
-
-                    // Check if it's a dynamic functoid capsule (and not the underlying SkiaMapper canvas itself)
-                    if (ctrl is BizTalkFunctoidNode)
-                    {
-                        pnlFunctoids.Controls.RemoveAt(i);
-                        ctrl.Dispose(); // Free system layout memory resources instantly
-                    }
-                }
-
-                Logger.Info("Master canvas layout workspace resetting completed.");
-            }
 
 
-        }
 
-        private dynamic FindNodeByXPath(IEnumerable<dynamic> schemaRegistry, string xpath)
-        {
-            var generator = new XsltMapGenerator(_mapper);
-            foreach (var nodeItem in schemaRegistry)
-            {
-                XmlNode xmlNode = nodeItem is XmlNode node ? node : nodeItem.XmlSourceNode;
-                if (xmlNode != null)
-                {
-                    // Internal path matching wrapper
-                    string computedPath = generator.GetNodePathForLookup(xmlNode);
-                    if (computedPath == xpath)
-                    {
-                        return nodeItem;
-                    }
-                }
-            }
-            return null;
-        }
 
-        private void btnLoadCanvas_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog ofd = new OpenFileDialog())
-            {
-                ofd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
-
-                if (ofd.ShowDialog() == DialogResult.OK)
-                {
-                    string jsonRaw = File.ReadAllText(ofd.FileName);
-                    var savedState = System.Text.Json.JsonSerializer.Deserialize<CanvasSaveState>(jsonRaw);
-
-                    // 1. Clear active connections and existing manual functoids from canvas
-                    _mapper.Connections.Clear();
-
-                    // Clean up old visual functoid controls if your mapper holds a separate list
-                    // _mapper.Functoids?.Clear(); 
-
-                    // Track newly generated functoids mapped from their JSON layout coordinate string "X_Y"
-                    var runtimeFunctoidRegistry = new Dictionary<string, dynamic>();
-
-                    // 2. Rehydrate and spawn Functoid nodes onto the canvas interface
-                    foreach (var f in savedState.Functoids)
-                    {
-                        Control newFunctoid = CreateFunctoid(f.FunctoidName, new System.Drawing.Point((int)f.X, (int)f.Y));
-
-                        //  CRITICAL FIX: Mount the control physically onto the WinForms Canvas Surface Container!
-                        pnlFunctoids.Controls.Add(newFunctoid);
-                        newFunctoid.BringToFront();
-
-                        // Map the original file ID token to this live runtime instance pointer
-                        runtimeFunctoidRegistry[f.Id] = newFunctoid;
-                    }
-
-                    // 3. Reconnect Wires
-                    foreach (var wire in savedState.Wires)
-                    {
-                        dynamic sourcePointer = null;
-                        dynamic targetPointer = null;
-
-                        // Resolve Source Pointer
-                        if (wire.SourceType == "SchemaNode")
-                        {
-                            // Find matching node inside left schema tree via XPath helper
-                            sourcePointer = FindNodeByXPath(_mapper.FlatSchemaRegistry, wire.SourceIdOrXPath);
-                        }
-                        else if (wire.SourceType == "Functoid")
-                        {
-                            runtimeFunctoidRegistry.TryGetValue(wire.SourceIdOrXPath, out sourcePointer);
-                        }
-
-                        // Resolve Target Pointer
-                        if (wire.TargetType == "SchemaNode")
-                        {
-                            // Find matching node inside right schema tree via XPath helper
-                            targetPointer = FindNodeByXPath(_mapper.FlatTargetSchemaRegistry, wire.TargetIdOrXPath);
-                        }
-                        else if (wire.TargetType == "Functoid")
-                        {
-                            runtimeFunctoidRegistry.TryGetValue(wire.TargetIdOrXPath, out targetPointer);
-                        }
-
-                        // 4. Append wire connection link if both ends were successfully resolved
-                        if (sourcePointer != null && targetPointer != null)
-                        {
-                            // Create connection structure match matching your canvas model definition
-                            // ❌ ERROR LINE
-                            //  _mapper.Connections.Add(new ConnectionItem(sourcePointer, targetPointer));
-                            _mapper.Connections.Add(new MappingConnection { Source = sourcePointer, Target = targetPointer });
-                        }
-                    }
-
-                    // If your _mapper object handles the canvas lifecycle UI itself:
-                    _mapper.Invalidate();
-                    // 5. Explicitly force the Skia Graphics Canvas control to refresh and repaint the connections
-                    // skiaControl.Invalidate(); 
-
-                    MessageBox.Show("Canvas wire layouts successfully loaded and re-drawn!", "State Restored");
-                }
-            }
-        }
 
         private void ToggleToolbox_Click(object sender, EventArgs e)
         {
@@ -1114,8 +1007,160 @@ namespace X12UtilsFRM
         #region Code Compilation Utilities (Xslt Outbound Maps)
         #endregion
 
+        #region buttons    
+        private void btnApplyXslt_Click(object sender, EventArgs e)
+        {
+            string infile = lbxInfileList.Text;
+            string outXml = Path.Combine(Path.GetDirectoryName(infile), $"{Path.GetFileNameWithoutExtension(infile)}_out.xml");
+            XsltTransformer.ApplyXslt(infile, lbxTargetSchema.Text, outXml);
+            Logger.Info($"{infile} transformed using {lbxTargetSchema.Text} and the output save in: {outXml}");
+            ShowFormWith(ContentFromFile(outXml));
+        }
+        private void btnClearCanvas_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                 "Are you sure you want to clear the entire canvas? This will delete all functoids and connection wires.",
+                 "Clear Canvas",
+                 MessageBoxButtons.YesNo,
+                 MessageBoxIcon.Warning
+             );
+
+            if (result == DialogResult.Yes)
+            {
+                // 2. Erase the connection data collection lines
+                _mapper.ClearAllConnections();
+
+                // 3. Scan the UI collection and purge temporary Functoid controls safely
+                // Loop backwards to safely delete controls while modifying the collection
+                for (int i = pnlFunctoids.Controls.Count - 1; i >= 0; i--)
+                {
+                    Control ctrl = pnlFunctoids.Controls[i];
+
+                    // Check if it's a dynamic functoid capsule (and not the underlying SkiaMapper canvas itself)
+                    if (ctrl is BizTalkFunctoidNode)
+                    {
+                        pnlFunctoids.Controls.RemoveAt(i);
+                        ctrl.Dispose(); // Free system layout memory resources instantly
+                    }
+                }
+
+                Logger.Info("Master canvas layout workspace resetting completed.");
+            }
 
 
+        }
+        private void btnGenerateXsltFromCanvas_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(lbxInfileList.Text))
+            {
+                MessageBox.Show("Please select a source file from the list first.", "Missing Source Context");
+                return;
+            }
+            try
+            {
+                var generator = new XsltMapGenerator(_mapper);
+                string directory = Path.GetDirectoryName(lbxInfileList.Text);
+                string filenameWithoutExt = Path.GetFileNameWithoutExtension(lbxInfileList.Text);
+                string targetSchemaFileName = Path.Combine(directory, filenameWithoutExt + ".xslt");
+                string transformDirectory = Path.GetDirectoryName(targetSchemaFileName);
+                if (!Directory.Exists(transformDirectory))
+                {
+                    Directory.CreateDirectory(transformDirectory);
+                }
+                string compiledXslt = generator.GenerateXsltFromCanvas(lbxInfileList.Text, targetSchemaFileName);
+                File.WriteAllText(targetSchemaFileName, compiledXslt);
+                LinkXsltToSourceXmlFile(lbxInfileList.Text, targetSchemaFileName);
+
+                ShowFormWith(compiledXslt);
+                Logger.Info($"XSLT Map generated successfully at:\n{targetSchemaFileName}", "Success");
+                rbtfXslt.Checked = true;
+                tabControl1.SelectedIndex = (int)enmTabPages.parse;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to generate XSLT map layout:\n{ex.Message}", "Generation Error");
+            }
+        }
+        private void btnLoadCanvas_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Mapping Layout Files (*.map.json)|*.map.json";
+
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    string jsonRaw = File.ReadAllText(ofd.FileName);
+                    var savedState = System.Text.Json.JsonSerializer.Deserialize<CanvasSaveState>(jsonRaw);
+
+                    // 1. Clear active connections and existing manual functoids from canvas
+                    _mapper.Connections.Clear();
+
+                    // Clean up old visual functoid controls if your mapper holds a separate list
+                    // _mapper.Functoids?.Clear(); 
+
+                    // Track newly generated functoids mapped from their JSON layout coordinate string "X_Y"
+                    var runtimeFunctoidRegistry = new Dictionary<string, dynamic>();
+
+                    // 2. Rehydrate and spawn Functoid nodes onto the canvas interface
+                    foreach (var f in savedState.Functoids)
+                    {
+                        Control newFunctoid = CreateFunctoid(f.FunctoidName, new System.Drawing.Point((int)f.X, (int)f.Y));
+
+                        //  CRITICAL FIX: Mount the control physically onto the WinForms Canvas Surface Container!
+                        pnlFunctoids.Controls.Add(newFunctoid);
+                        newFunctoid.BringToFront();
+
+                        // Map the original file ID token to this live runtime instance pointer
+                        runtimeFunctoidRegistry[f.Id] = newFunctoid;
+                    }
+
+                    // 3. Reconnect Wires
+                    foreach (var wire in savedState.Wires)
+                    {
+                        dynamic sourcePointer = null;
+                        dynamic targetPointer = null;
+
+                        // Resolve Source Pointer
+                        if (wire.SourceType == "SchemaNode")
+                        {
+                            // Find matching node inside left schema tree via XPath helper
+                            sourcePointer = FindNodeByXPath(_mapper.FlatSchemaRegistry, wire.SourceIdOrXPath);
+                        }
+                        else if (wire.SourceType == "Functoid")
+                        {
+                            runtimeFunctoidRegistry.TryGetValue(wire.SourceIdOrXPath, out sourcePointer);
+                        }
+
+                        // Resolve Target Pointer
+                        if (wire.TargetType == "SchemaNode")
+                        {
+                            // Find matching node inside right schema tree via XPath helper
+                            targetPointer = FindNodeByXPath(_mapper.FlatTargetSchemaRegistry, wire.TargetIdOrXPath);
+                        }
+                        else if (wire.TargetType == "Functoid")
+                        {
+                            runtimeFunctoidRegistry.TryGetValue(wire.TargetIdOrXPath, out targetPointer);
+                        }
+
+                        // 4. Append wire connection link if both ends were successfully resolved
+                        if (sourcePointer != null && targetPointer != null)
+                        {
+                            // Create connection structure match matching your canvas model definition
+                            // ❌ ERROR LINE
+                            //  _mapper.Connections.Add(new ConnectionItem(sourcePointer, targetPointer));
+                            _mapper.Connections.Add(new MappingConnection { Source = sourcePointer, Target = targetPointer });
+                        }
+                    }
+
+                    // If your _mapper object handles the canvas lifecycle UI itself:
+                    _mapper.Invalidate();
+                    // 5. Explicitly force the Skia Graphics Canvas control to refresh and repaint the connections
+                    // skiaControl.Invalidate(); 
+
+                    MessageBox.Show("Canvas wire layouts successfully loaded and re-drawn!", "State Restored");
+                }
+            }
+        }
         private void btnSaveCanvas_Click(object sender, EventArgs e)
         {
             using (SaveFileDialog sfd = new SaveFileDialog())
@@ -1134,6 +1179,8 @@ namespace X12UtilsFRM
             }
         }
         private void btnHippaParse_Click(object sender, EventArgs e) { }
+
+        #endregion buttons
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
             enmTabPages currentTab = (enmTabPages)tabControl1.SelectedIndex;
@@ -1217,37 +1264,7 @@ namespace X12UtilsFRM
                 doc.Save(writer);
             }
         }
-        private void btnGenerateXsltFromCanvas_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(lbxInfileList.Text))
-            {
-                MessageBox.Show("Please select a source file from the list first.", "Missing Source Context");
-                return;
-            }
-            try
-            {
-                var generator = new XsltMapGenerator(_mapper);
-                string directory = Path.GetDirectoryName(lbxInfileList.Text);
-                string filenameWithoutExt = Path.GetFileNameWithoutExtension(lbxInfileList.Text);
-                string targetSchemaFileName = Path.Combine(directory, filenameWithoutExt + ".xslt");
-                string transformDirectory = Path.GetDirectoryName(targetSchemaFileName);
-                if (!Directory.Exists(transformDirectory))
-                {
-                    Directory.CreateDirectory(transformDirectory);
-                }
-                string compiledXslt = generator.GenerateXsltFromCanvas(lbxInfileList.Text, targetSchemaFileName);
-                File.WriteAllText(targetSchemaFileName, compiledXslt);
-                LinkXsltToSourceXmlFile(lbxInfileList.Text, targetSchemaFileName);
 
-                ShowFormWith(compiledXslt);
-
-                MessageBox.Show($"XSLT Map generated successfully at:\n{targetSchemaFileName}", "Success");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to generate XSLT map layout:\n{ex.Message}", "Generation Error");
-            }
-        }
 
         private void ShowFormWith(string stringToShow)
         {
@@ -1380,12 +1397,7 @@ namespace X12UtilsFRM
 
         }
 
-        private void btnApplyXslt_Click(object sender, EventArgs e)
-        {
-            string infile = lbxInfileList.Text;
-            string outXml = Path.Combine(Path.GetDirectoryName(infile),$"{Path.GetFileNameWithoutExtension(infile)}_out.xml" );
-            XsltTransformer.ApplyXslt(infile, lbxTargetSchema.Text,outXml );
-        }
+    
 
         private void MenuBrowse_Click(object sender, EventArgs e)
         {
@@ -1394,7 +1406,7 @@ namespace X12UtilsFRM
             ContextMenuStrip ownerMenu = (ContextMenuStrip)clickedItem.Owner;
             ListBox parentControl = ownerMenu.SourceControl as ListBox;
             string htmlContent = $@"<html><head><meta http-equiv=""X-UA-Compatible"" content=""IE=edge"" /></head><body><xmp>{ContentFromFile(parentControl.Text)}</xmp></body></html>";
-           // DisplayHtml(htmlContent);
+            // DisplayHtml(htmlContent);
 
             ShowFormWith(ContentFromFile(parentControl.Text));
             //tabControl1.SelectedIndex = (int)enmTabPages.browser;
