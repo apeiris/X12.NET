@@ -126,6 +126,7 @@ namespace PdfX.App.Services
                 {
                     string varName = $"var:v{variableCounter}";
 
+                    // The execution expression is resolved here
                     string inlineExpressionCall = ResolveFunctoidExpression(
                         conn.Source,
                         sourceRootName,
@@ -160,106 +161,97 @@ namespace PdfX.App.Services
             return xslt.ToString();
         }
 
+        // Helper string normalizer to strip symbols from text across the parsing layer
+        public static string NormalizeFunctoidName(string rawText)
+        {
+            if (string.IsNullOrEmpty(rawText)) return string.Empty;
+
+            // If the string contains a space splitting the icon prefix from the name (e.g., "＋ Concatenate")
+            string[] parts = rawText.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 1)
+            {
+                return parts[1].Trim();
+            }
+            return rawText.Trim();
+        }
+
         public string GetNodePathForLookup(XmlNode node)
         {
             return BuildAbsoluteXPath(node);
         }
 
-
-        private string ResolveFunctoidExpression(
-     dynamic functoidNode,
-     string sourceRootName,
-     Dictionary<string, string> scriptRegistry,
-     IEnumerable<dynamic> connections)
+        private string ResolveFunctoidExpression(dynamic functoidNode, string sourceRootName, Dictionary<string, string> scriptRegistry, IEnumerable<dynamic> connections)
         {
-            var inputLinks = connections.Where(c => object.ReferenceEquals(c.Target, functoidNode)).ToList();
-            List<string> optimizedArguments = new List<string>();
-            List<string> formalParameters = new List<string>();
+            // 1. Clean the incoming node name identifier
+            string rawName = functoidNode.FunctoidName ?? string.Empty;
+            string cleanName = NormalizeFunctoidName(rawName);
 
-            int argIdx = 1;
-            foreach (var inputConn in inputLinks)
+            // 2. Map input trace lines feeding this control capsule
+            var inputConnections = connections.Where(c => object.Equals(c.Target, functoidNode)).ToList();
+            List<string> xPathArgs = new List<string>();
+
+            foreach (var conn in inputConnections)
             {
-                if (inputConn.Source is XmlNode || inputConn.Source.GetType().Name == "SchemaNodeItem")
+                XmlNode srcNode = conn.Source is XmlNode xmlSrc ? xmlSrc : conn.Source.XmlSourceNode;
+                string argXPath = BuildAbsoluteXPath(srcNode).Replace(sourceRootName + "/", "");
+                xPathArgs.Add($"string({argXPath})");
+            }
+
+            string argumentsCSV = string.Join(", ", xPathArgs);
+            int inputCount = xPathArgs.Count;
+
+            // 3. Query our XML-loaded Registry definitions
+            var xmlConfig = FunctoidRegistry.GetConfig(cleanName);
+
+            if (xmlConfig != null)
+            {
+                // Build a unique method footprint name (e.g. Fct_Concatenate_2)
+                string customMethodName = string.Format(xmlConfig.MethodNameFormat, inputCount);
+
+                if (!scriptRegistry.ContainsKey(customMethodName))
                 {
-                    XmlNode inputXmlNode = inputConn.Source is XmlNode xmlIn ? xmlIn : inputConn.Source.XmlSourceNode;
-                    if (inputXmlNode != null)
+                    List<string> methodParams = new List<string>();
+                    List<string> variableReturns = new List<string>();
+
+                    for (int i = 1; i <= inputCount; i++)
                     {
-                        string inputPath = BuildAbsoluteXPath(inputXmlNode).Replace(sourceRootName + "/", "");
-                        optimizedArguments.Add($"string({inputPath})");
-                        formalParameters.Add($"string p_arg{argIdx}");
-                        argIdx++;
+                        methodParams.Add($"string p_arg{i}");
+                        variableReturns.Add($"p_arg{i}");
                     }
+                    if (inputCount == 0) methodParams.Add("string p_arg1");
+
+                    // Format parameters and execution code pieces dynamically
+                    string paramSignature = string.Join(", ", methodParams);
+                    string logicBody = inputCount > 0
+                        ? string.Join(xmlConfig.JoinOperator, variableReturns)
+                        : "\"\"";
+
+                    // Inject parts cleanly into the structural CDATA template extracted from XML
+
+                    string finalizedScript = xmlConfig.ScriptTemplate.Replace("__METHOD_NAME__", customMethodName).Replace("__PARAMS__", paramSignature).Replace("__BODY__", logicBody);
+                    scriptRegistry.Add(customMethodName, finalizedScript);
                 }
-                else if (inputConn.Source.GetType().Name == "BizTalkFunctoidNode")
-                {
-                    string nestedExpression = ResolveFunctoidExpression(inputConn.Source, sourceRootName, scriptRegistry, connections);
-                    optimizedArguments.Add(nestedExpression);
-                    formalParameters.Add($"string p_arg{argIdx}");
-                    argIdx++;
-                }
+
+                return $"userCSharp:{customMethodName}({argumentsCSV})";
             }
 
-            string toolName = functoidNode.FunctoidName;
-            var standardTools = new List<string> { "Concatenate", "Add", "Subtract", "Trim", "Uppercase", "Lowercase" };
-            if (!standardTools.Contains(toolName)) toolName = "DirectPassThrough";
-
-            int argumentCount = optimizedArguments.Count;
-            string functionName = $"Fct_{toolName}_{argumentCount}";
-            string paramsJoined = string.Join(", ", formalParameters);
-
-            if (!scriptRegistry.ContainsKey(functionName))
+            // 4. Default System Fallback: Direct Pass Through Generator
+            string fallbackMethodName = $"Fct_DirectPassThrough_{scriptRegistry.Count + 1}";
+            if (!scriptRegistry.ContainsKey(fallbackMethodName))
             {
-                StringBuilder methodBody = new StringBuilder();
-
-                switch (toolName)
-                {
-                    case "Concatenate":
-                        // GENERATES: public string Fct_Concatenate_2(string p_arg1, string p_arg2)
-                        methodBody.AppendLine($"    public string {functionName}({paramsJoined})");
-                        methodBody.AppendLine("    {");
-
-                        // Get the variable names: p_arg1, p_arg2, etc.
-                        var catVars = formalParameters.Select(p => p.Split(' ')[1]);
-                        methodBody.AppendLine($"        return string.Concat({string.Join(", ", catVars)});");
-                        methodBody.AppendLine("    }");
-                        break;
-
-                    case "Add":
-                        // GENERATES: public string Fct_Add_2(string p_arg1, string p_arg2)
-                        methodBody.AppendLine($"    public string {functionName}({paramsJoined})");
-                        methodBody.AppendLine("    {");
-                        methodBody.AppendLine("        double total = 0;");
-                        foreach (var param in formalParameters)
-                        {
-                            string varName = param.Split(' ')[1];
-                            methodBody.AppendLine($"        if (double.TryParse({varName}, out double val_{varName})) total += val_{varName};");
-                        }
-                        methodBody.AppendLine("        return total.ToString();");
-                        methodBody.AppendLine("    }");
-                        break;
-
-                    case "Uppercase":
-                        methodBody.AppendLine($"    public string {functionName}({paramsJoined})");
-                        methodBody.AppendLine("    {");
-                        string upperParam = formalParameters.Count > 0 ? formalParameters[0].Split(' ')[1] : "\"\"";
-                        methodBody.AppendLine($"        return ({upperParam} ?? \"\").ToUpper();");
-                        methodBody.AppendLine("    }");
-                        break;
-
-                    default:
-                        methodBody.AppendLine($"    public string {functionName}({paramsJoined})");
-                        methodBody.AppendLine("    {");
-                        string fallbackParam = formalParameters.Count > 0 ? formalParameters[0].Split(' ')[1] : "\"\"";
-                        methodBody.AppendLine($"        return {fallbackParam};");
-                        methodBody.AppendLine("    }");
-                        break;
-                }
-
-                scriptRegistry.Add(functionName, methodBody.ToString());
+                scriptRegistry.Add(fallbackMethodName,
+                    "    public string " + fallbackMethodName + "(string p_arg1)\r\n    {\r\n        return p_arg1;\r\n    }\r\n");
             }
 
-            return $"userCSharp:{functionName}({string.Join(", ", optimizedArguments)})";
+            string finalArgs = inputCount > 0 ? xPathArgs[0] : "\"\"";
+            return $"userCSharp:{fallbackMethodName}({finalArgs})";
         }
+
+
+
+
+
+
         public void SaveCanvasLayout(string outputJsonFilePath, string sourcePath, string targetPath)
         {
             var state = new CanvasSaveState

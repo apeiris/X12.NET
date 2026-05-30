@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Functoids>
+	<Functoid name="Concatenate">
+		<MethodNameFormat>Fct_Concatenate_{0}</MethodNameFormat>
+		<ScriptTemplate>
+			<![CDATA[
+    public string __METHOD_NAME__(__PARAMS__)
+    {
+        return __BODY__;
+    }
+      ]]>
+		</ScriptTemplate>
+		<JoinOperator> + " " + </JoinOperator>
+	</Functoid>
+
+	<Functoid name="String Left">
+		<MethodNameFormat>Fct_Left_{0}</MethodNameFormat>
+		<ScriptTemplate>
+			<![CDATA[
+    public string __METHOD_NAME__(string p_str, string p_len)
+    {
+        if (string.IsNullOrEmpty(p_str)) return string.Empty;
+        if (!int.TryParse(p_len, out int len) || len <= 0) return string.Empty;
+        return p_str.Length <= len ? p_str : p_str.Substring(0, len);
+    }
+      ]]>
+		</ScriptTemplate>
+	</Functoid>
+</Functoids>

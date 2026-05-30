@@ -129,6 +129,7 @@
     <Compile Include="BiztalkFunctoidNode.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="FunctoidRegistry.cs" />
     <Compile Include="FunctoidScriptEditorForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -154,6 +155,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="XsltTransformer.cs" />
+    <EmbeddedResource Include="Resources\BuiltInFunctoids.xml" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

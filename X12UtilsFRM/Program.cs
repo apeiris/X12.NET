@@ -6,17 +6,28 @@ using System.Windows.Forms;
 using NLog;
 using NLog.Config;
 
-namespace X12UtilsFRM {
-    static class Program {
+namespace X12UtilsFRM
+{
+    static class Program
+    {
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main() {
+        static void Main()
+        {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-          
-            Application.Run(new X12UtilsFRM());
+            try
+            {
+                FunctoidRegistry.LoadRegistry();  
+                Application.Run(new X12UtilsFRM());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Registry initialization failed early:\n{ex.Message}", "Init Error");
+            }
+         
         }
     }
 }
